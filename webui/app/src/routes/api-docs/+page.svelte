@@ -30,7 +30,7 @@
 
   onMount(async () => {
     try {
-      const res = await apiFetch('/', {
+      const res = await apiFetch('', {
         headers: { 'Accept': 'application/json' }
       });
       if (res.ok) endpoints = await res.json();

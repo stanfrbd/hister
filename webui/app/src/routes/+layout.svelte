@@ -71,6 +71,6 @@
 <footer class="h-12 px-6 bg-brutal-bg border-t-[3px] border-brutal-border flex items-center justify-center gap-6 text-sm">
   <a href="help" class="font-space text-[13px] tracking-[1px] text-text-brand-secondary hover:text-hister-indigo no-underline hover:underline uppercase">Help</a>
   <a href="about" class="font-space text-[13px] tracking-[1px] text-text-brand-secondary hover:text-hister-indigo no-underline hover:underline uppercase">About</a>
-  <a href="api" class="font-space text-[13px] tracking-[1px] text-text-brand-secondary hover:text-hister-indigo no-underline hover:underline uppercase">API</a>
+  <a href="api-docs" class="font-space text-[11px] md:text-[13px] tracking-[1px] text-text-brand-secondary hover:text-hister-indigo no-underline hover:underline uppercase">API</a>
   <a href="https://github.com/asciimoo/hister/" class="font-space text-[13px] tracking-[1px] text-text-brand-secondary hover:text-hister-indigo no-underline hover:underline uppercase" target="_blank" rel="noopener">GitHub</a>
 </footer>
