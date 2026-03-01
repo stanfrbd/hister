@@ -36,6 +36,7 @@ buildGoModule (finalAttrs: {
       ../go.mod
       ../go.sum
       ../hister.go
+      ../client
       ../server
       ../config
       ../ui
