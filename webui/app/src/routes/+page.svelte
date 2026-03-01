@@ -14,7 +14,6 @@
     escapeHTML,
     buildSearchQuery,
     parseSearchResults,
-    updateSearchURL,
     openURL
   } from '$lib/search';
   import { fetchConfig, apiFetch } from '$lib/api';
@@ -150,8 +149,34 @@
     wsManager?.send(JSON.stringify(message));
   }
 
+  let skipUrlUpdate = false;
+  let lastPushedEmpty = true;
+
   function updateURL() {
-    updateSearchURL(window.location.pathname, query, dateFrom, dateTo);
+    if (skipUrlUpdate) return;
+    const isEmpty = !query;
+    const url = query
+      ? `${window.location.pathname}?q=${encodeURIComponent(query)}${dateFrom ? '&date_from=' + encodeURIComponent(dateFrom) : ''}${dateTo ? '&date_to=' + encodeURIComponent(dateTo) : ''}`
+      : window.location.pathname;
+
+    if (isEmpty !== lastPushedEmpty) {
+      history.pushState({ query, dateFrom, dateTo }, '', url);
+      lastPushedEmpty = isEmpty;
+    } else {
+      history.replaceState({ query, dateFrom, dateTo }, '', url);
+    }
+  }
+
+  function handlePopState() {
+    skipUrlUpdate = true;
+    const params = new URLSearchParams(window.location.search);
+    query = params.get('q') || '';
+    dateFrom = params.get('date_from') || '';
+    dateTo = params.get('date_to') || '';
+    lastPushedEmpty = !query;
+    if (query && connected) sendQuery(query);
+    if (!query) { autocomplete = ''; lastResults = null; }
+    tick().then(() => { skipUrlUpdate = false; });
   }
 
   function renderResults(event: MessageEvent) {
@@ -162,9 +187,13 @@
     resultsShown = true;
   }
 
+  function stripHtml(s: string): string {
+    return s.replace(/<[^>]*>/g, '');
+  }
+
   function openResult(url: string, title: string, newWindow = false) {
     if (config.openResultsOnNewTab) newWindow = true;
-    saveHistoryItem(url, title, query, false, () => openURL(url, newWindow));
+    saveHistoryItem(url, stripHtml(title), query, false, () => openURL(url, newWindow));
   }
 
   async function saveHistoryItem(url: string, title: string, queryStr: string, remove: boolean, callback?: () => void) {
@@ -198,7 +227,7 @@
   function updatePriorityResult(url: string, title: string, remove: boolean) {
     const q = actionsQuery || query;
     if (!q) return;
-    saveHistoryItem(url, title, q, remove, () => {
+    saveHistoryItem(url, stripHtml(title), q, remove, () => {
       actionsMessage = `Priority result ${remove ? 'deleted' : 'added'}.`;
       actionsError = false;
     });
@@ -295,7 +324,11 @@
   }
 
   function handleKeydown(e: KeyboardEvent) {
-    if (keyHandler?.handle(e)) { e.preventDefault(); return; }
+    const isInput = document.activeElement instanceof HTMLInputElement || document.activeElement instanceof HTMLTextAreaElement;
+    const hasModifier = e.altKey || e.ctrlKey || e.metaKey;
+    if (!isInput || hasModifier) {
+      if (keyHandler?.handle(e)) { e.preventDefault(); return; }
+    }
     if (e.key === 'Escape') {
       if (showHelp) { showHelp = false; e.preventDefault(); return; }
       if (contextMenuSearch) { contextMenuSearch = null; e.preventDefault(); return; }
@@ -456,6 +489,7 @@
     if (q) query = q;
     if (df) dateFrom = df;
     if (dt) dateTo = dt;
+    lastPushedEmpty = !q;
   });
 
   onMount(() => {
@@ -480,7 +514,7 @@
   <title>Hister</title>
 </svelte:head>
 
-<svelte:window onkeydown={handleKeydown} />
+<svelte:window onkeydown={handleKeydown} onpopstate={handlePopState} />
 
 <Dialog.Root bind:open={showPopup}>
   <Dialog.Content class="max-w-2xl max-h-[80vh] overflow-auto border-[3px] border-border-brand bg-card-surface shadow-[6px_6px_0px_var(--hister-indigo)] rounded-none p-6">
@@ -531,7 +565,7 @@
 
 {#if isSearching}
   <div class="flex-1 flex flex-col min-h-0">
-    <div class="flex items-center gap-3 h-10 md:h-14 px-4 bg-card-surface border-b-[2px] border-border-brand-muted">
+    <div class="search flex items-center gap-3 h-10 md:h-14 px-4 bg-card-surface border-b-[2px] border-border-brand-muted">
       <Search class="size-4 md:size-6 text-text-brand-muted" />
       <Input
         bind:ref={inputEl}
@@ -547,7 +581,8 @@
     </span>
     {/if}
 
-    <ScrollArea class="flex-1 px-4 md:px-12 py-2 space-y-3">
+    <ScrollArea class="flex-1">
+      <div class="w-full overflow-x-hidden px-4 md:px-12 py-2 space-y-3">
       {#if hasResults}
         <div class="flex items-center justify-between">
           <span class="font-outfit text-base font-bold text-hister-indigo">
@@ -726,6 +761,7 @@
           <span class="font-inter text-text-brand-muted">Searching...</span>
         </div>
       {/if}
+      </div>
     </ScrollArea>
   </div>
 {:else}

@@ -1,6 +1,8 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { apiFetch } from '$lib/api';
+  import { Badge } from '@hister/components/ui/badge';
+  import * as Card from '@hister/components/ui/card';
+  import * as Table from '@hister/components/ui/table';
 
   interface EndpointArg {
     name: string;
@@ -27,7 +29,7 @@
 
   onMount(async () => {
     try {
-      const res = await apiFetch('', {
+      const res = await fetch('/api', {
         headers: { 'Accept': 'application/json' }
       });
       if (res.ok) endpoints = await res.json();
@@ -41,48 +43,102 @@
   <title>Hister - API</title>
 </svelte:head>
 
-<div class="section">
-  <h1>API documentation</h1>
+<div class="px-3 md:px-6 py-4 md:py-5 space-y-4 md:space-y-5 overflow-y-auto flex-1">
+  <div class="space-y-1">
+    <h1 class="font-outfit text-lg md:text-xl font-extrabold text-text-brand">API Documentation</h1>
+    <p class="font-inter text-xs md:text-sm text-text-brand-secondary">Available HTTP endpoints for integrating with Hister</p>
+  </div>
+
   {#if loading}
-    <p>Loading...</p>
+    <p class="font-inter text-sm text-text-brand-muted text-center py-8">Loading endpoints...</p>
   {:else}
-    <ul>
+    <nav class="flex flex-wrap gap-2">
       {#each endpoints as ep}
-        <li><a href="#{slugify(ep.name, ep.method)}">{ep.name}</a></li>
+        <a
+          href="#{slugify(ep.name, ep.method)}"
+          class="font-inter text-xs font-semibold text-hister-indigo hover:underline no-underline px-2 py-1 border-[2px] border-border-brand-muted bg-muted-surface hover:border-hister-indigo transition-colors"
+        >
+          {ep.name}
+        </a>
       {/each}
-    </ul>
-    {#each endpoints as ep}
-      <div class="container" id={slugify(ep.name, ep.method)}>
-        <h3>{ep.name}</h3>
-        <h2 class="success"><code>{ep.method}</code> <code>{ep.path}</code>{#if ep.csrf_required}<span class="small grey"> CSRF</span>{/if}</h2>
-        <p>{ep.description}</p>
-        <hr />
-        {#if ep.args && ep.args.length > 0}
-          <h4>Arguments</h4>
-          <table>
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Type</th>
-                <th>Required</th>
-                <th>Description</th>
-              </tr>
-            </thead>
-            <tbody>
-              {#each ep.args as arg}
-                <tr>
-                  <td><code>{arg.name}</code></td>
-                  <td><code>{arg.type}</code></td>
-                  <td>{arg.required}</td>
-                  <td>{arg.description}</td>
-                </tr>
-              {/each}
-            </tbody>
-          </table>
-        {:else}
-          <h5>No arguments available for this endpoint</h5>
-        {/if}
-      </div>
-    {/each}
+    </nav>
+
+    <div class="space-y-4">
+      {#each endpoints as ep}
+        <Card.Root id={slugify(ep.name, ep.method)} class="bg-card-surface border-[2px] border-border-brand-muted rounded-none py-0 gap-0 overflow-hidden">
+          <Card.Header class="flex-col md:flex-row md:items-center justify-between px-4 py-3 gap-2">
+            <div class="space-y-1">
+              <Card.Title class="font-outfit text-base font-extrabold text-text-brand">{ep.name}</Card.Title>
+              <div class="flex items-center gap-2 flex-wrap">
+                <Badge
+                  variant="default"
+                  class="text-xs font-bold px-2.5 py-0.5 border-0 {ep.method === 'GET' ? 'bg-hister-teal text-white' : 'bg-hister-coral text-white'}"
+                >
+                  {ep.method}
+                </Badge>
+                <code class="font-fira text-sm text-text-brand-secondary">{ep.path}</code>
+                {#if ep.csrf_required}
+                  <Badge variant="outline" class="text-xs font-semibold border-[2px] border-hister-amber text-hister-amber px-2 py-0.5">
+                    CSRF
+                  </Badge>
+                {/if}
+              </div>
+            </div>
+          </Card.Header>
+
+          <Card.Content class="px-4 py-3 border-t-[2px] border-border-brand-muted">
+            <p class="font-inter text-sm text-text-brand-secondary">{ep.description}</p>
+
+            {#if ep.args && ep.args.length > 0}
+              <div class="mt-3">
+                <h4 class="font-outfit text-sm font-bold text-text-brand mb-2">Arguments</h4>
+                <div class="hidden md:block">
+                  <Table.Root>
+                    <Table.Header>
+                      <Table.Row class="bg-muted-surface border-b-[2px] border-border-brand-muted hover:bg-muted-surface">
+                        <Table.Head class="font-inter text-xs font-bold text-text-brand-muted px-3 py-2 h-auto">Name</Table.Head>
+                        <Table.Head class="font-inter text-xs font-bold text-text-brand-muted px-3 py-2 h-auto">Type</Table.Head>
+                        <Table.Head class="font-inter text-xs font-bold text-text-brand-muted px-3 py-2 h-auto">Required</Table.Head>
+                        <Table.Head class="font-inter text-xs font-bold text-text-brand-muted px-3 py-2 h-auto">Description</Table.Head>
+                      </Table.Row>
+                    </Table.Header>
+                    <Table.Body>
+                      {#each ep.args as arg}
+                        <Table.Row class="border-b-[2px] border-border-brand-muted">
+                          <Table.Cell class="font-fira text-sm font-semibold text-text-brand px-3 py-2"><code>{arg.name}</code></Table.Cell>
+                          <Table.Cell class="font-fira text-sm text-text-brand-secondary px-3 py-2"><code>{arg.type}</code></Table.Cell>
+                          <Table.Cell class="px-3 py-2">
+                            <Badge variant="default" class="text-xs px-2 py-0 border-0 {arg.required ? 'bg-hister-rose text-white' : 'bg-muted-surface text-text-brand-muted'}">
+                              {arg.required ? 'Yes' : 'No'}
+                            </Badge>
+                          </Table.Cell>
+                          <Table.Cell class="font-inter text-sm text-text-brand-secondary px-3 py-2">{arg.description}</Table.Cell>
+                        </Table.Row>
+                      {/each}
+                    </Table.Body>
+                  </Table.Root>
+                </div>
+                <div class="md:hidden divide-y-[2px] divide-border-brand-muted">
+                  {#each ep.args as arg}
+                    <div class="py-2 space-y-1">
+                      <div class="flex items-center gap-2">
+                        <code class="font-fira text-sm font-semibold text-text-brand">{arg.name}</code>
+                        <code class="font-fira text-xs text-text-brand-muted">{arg.type}</code>
+                        {#if arg.required}
+                          <Badge variant="default" class="text-xs px-1.5 py-0 border-0 bg-hister-rose text-white">required</Badge>
+                        {/if}
+                      </div>
+                      <p class="font-inter text-xs text-text-brand-secondary">{arg.description}</p>
+                    </div>
+                  {/each}
+                </div>
+              </div>
+            {:else}
+              <p class="mt-3 font-inter text-xs text-text-brand-muted">No arguments for this endpoint</p>
+            {/if}
+          </Card.Content>
+        </Card.Root>
+      {/each}
+    </div>
   {/if}
 </div>

@@ -137,19 +137,19 @@
   <title>Hister Beta - Rules</title>
 </svelte:head>
 
-<div class="px-6 py-5 space-y-5 overflow-y-auto flex-1">
+<div class="px-3 md:px-6 py-4 md:py-5 space-y-4 md:space-y-5 overflow-y-auto flex-1">
   <!-- Header -->
-  <div class="flex items-center justify-between">
+  <div class="flex flex-col md:flex-row md:items-center justify-between gap-2">
     <div class="space-y-1">
-      <h1 class="font-outfit text-xl font-extrabold text-text-brand">Search Rules & Aliases</h1>
-      <p class="font-inter text-sm text-text-brand-secondary">Configure how Hister indexes and searches your browsing history</p>
+      <h1 class="font-outfit text-lg md:text-xl font-extrabold text-text-brand">Search Rules & Aliases</h1>
+      <p class="font-inter text-xs md:text-sm text-text-brand-secondary">Configure how Hister indexes and searches your browsing history</p>
     </div>
-    <div class="flex items-center gap-4">
-      <Badge variant="outline" class="border-[2px] border-border-brand-muted bg-muted-surface text-text-brand-secondary font-inter text-xs font-semibold gap-1.5 px-3 py-1.5">
+    <div class="flex items-center gap-2 md:gap-4">
+      <Badge variant="outline" class="border-[2px] border-border-brand-muted bg-muted-surface text-text-brand-secondary font-inter text-xs font-semibold gap-1.5 px-2 md:px-3 py-1 md:py-1.5">
         <Shield class="size-3.5 text-hister-coral" />
         {ruleRows.length} rules
       </Badge>
-      <Badge variant="outline" class="border-[2px] border-border-brand-muted bg-muted-surface text-text-brand-secondary font-inter text-xs font-semibold gap-1.5 px-3 py-1.5">
+      <Badge variant="outline" class="border-[2px] border-border-brand-muted bg-muted-surface text-text-brand-secondary font-inter text-xs font-semibold gap-1.5 px-2 md:px-3 py-1 md:py-1.5">
         <Link2 class="size-3.5 text-hister-indigo" />
         {Object.keys(rules.aliases).length} aliases
       </Badge>
@@ -173,58 +173,84 @@
     <!-- Search Aliases Card -->
     <Card.Root class="bg-card-surface border-[2px] border-border-brand-muted rounded-none py-0 gap-0 overflow-hidden">
       <Card.Header class="flex-row items-center justify-between px-4 py-3 bg-hister-indigo gap-2">
-        <Card.Title class="font-outfit text-lg font-extrabold text-white">Search Aliases</Card.Title>
-        <span class="font-inter text-lg font-medium text-white/70">{Object.keys(rules.aliases).length} aliases</span>
+        <Card.Title class="font-outfit text-base md:text-lg font-extrabold text-white">Search Aliases</Card.Title>
+        <span class="font-inter text-sm md:text-base font-medium text-white/70">{Object.keys(rules.aliases).length} aliases</span>
       </Card.Header>
 
       <Card.Content class="p-0">
-        <Table.Root>
-          <Table.Header>
-            <Table.Row class="bg-muted-surface border-b-[2px] border-border-brand-muted hover:bg-muted-surface">
-              <Table.Head class="font-inter text-xs font-bold text-text-brand-muted w-[120px] px-4 py-2 h-auto">Keyword</Table.Head>
-              <Table.Head class="font-inter text-xs font-bold text-text-brand-muted px-4 py-2 h-auto">Expands To</Table.Head>
-              <Table.Head class="w-8 px-4 py-2 h-auto"></Table.Head>
-            </Table.Row>
-          </Table.Header>
-          <Table.Body>
-            {#each Object.entries(rules.aliases) as [keyword, value]}
-              <Table.Row class="border-b-[2px] border-border-brand-muted">
-                <Table.Cell class="font-fira text-lg font-semibold text-text-brand w-[120px] px-4 py-2.5">{keyword}</Table.Cell>
-                <Table.Cell class="font-fira text-lg text-text-brand-secondary truncate px-4 py-2.5 max-w-0">{value}</Table.Cell>
-                <Table.Cell class="w-8 px-4 py-2.5">
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    class="shrink-0 text-text-brand-muted hover:text-hister-rose"
-                    onclick={() => deleteAlias(keyword)}
-                  >
-                    <Trash2 class="size-4" />
-                  </Button>
-                </Table.Cell>
+        <!-- Desktop table -->
+        <div class="hidden md:block">
+          <Table.Root>
+            <Table.Header>
+              <Table.Row class="bg-muted-surface border-b-[2px] border-border-brand-muted hover:bg-muted-surface">
+                <Table.Head class="font-inter text-xs font-bold text-text-brand-muted w-[120px] px-4 py-2 h-auto">Keyword</Table.Head>
+                <Table.Head class="font-inter text-xs font-bold text-text-brand-muted px-4 py-2 h-auto">Expands To</Table.Head>
+                <Table.Head class="w-8 px-4 py-2 h-auto"></Table.Head>
               </Table.Row>
-            {/each}
-          </Table.Body>
-        </Table.Root>
+            </Table.Header>
+            <Table.Body>
+              {#each Object.entries(rules.aliases) as [keyword, value]}
+                <Table.Row class="border-b-[2px] border-border-brand-muted">
+                  <Table.Cell class="font-fira text-sm font-semibold text-text-brand w-[120px] px-4 py-2.5">{keyword}</Table.Cell>
+                  <Table.Cell class="font-fira text-sm text-text-brand-secondary truncate px-4 py-2.5 max-w-0">{value}</Table.Cell>
+                  <Table.Cell class="w-8 px-4 py-2.5">
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      class="shrink-0 text-text-brand-muted hover:text-hister-rose"
+                      onclick={() => deleteAlias(keyword)}
+                    >
+                      <Trash2 class="size-4" />
+                    </Button>
+                  </Table.Cell>
+                </Table.Row>
+              {/each}
+            </Table.Body>
+          </Table.Root>
+        </div>
+
+        <!-- Mobile stacked list -->
+        <div class="md:hidden divide-y-[2px] divide-border-brand-muted">
+          {#each Object.entries(rules.aliases) as [keyword, value]}
+            <div class="flex items-center gap-2 px-3 py-2.5">
+              <div class="flex-1 min-w-0">
+                <span class="font-fira text-sm font-semibold text-text-brand">{keyword}</span>
+                <span class="font-inter text-xs text-text-brand-muted mx-1">&rarr;</span>
+                <span class="font-fira text-sm text-text-brand-secondary truncate block">{value}</span>
+              </div>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                class="shrink-0 text-text-brand-muted hover:text-hister-rose"
+                onclick={() => deleteAlias(keyword)}
+              >
+                <Trash2 class="size-4" />
+              </Button>
+            </div>
+          {/each}
+        </div>
       </Card.Content>
 
-      <Card.Footer class="px-4 py-2.5 bg-muted-surface">
-        <form onsubmit={addAlias} class="flex items-center gap-3 w-full">
-          <Input
-            type="text"
-            bind:value={newAliasKeyword}
-            placeholder="keyword..."
-            class="w-[120px] h-9 px-3 bg-card-surface border-[2px] border-border-brand-muted font-fira text-xs text-text-brand shadow-none focus-visible:ring-0 focus-visible:border-hister-indigo"
-          />
-          <Input
-            type="text"
-            bind:value={newAliasValue}
-            placeholder="expands to..."
-            class="flex-1 h-9 px-3 bg-card-surface border-[2px] border-border-brand-muted font-fira text-xs text-text-brand shadow-none focus-visible:ring-0 focus-visible:border-hister-indigo"
-          />
+      <Card.Footer class="px-3 md:px-4 py-2.5 bg-muted-surface">
+        <form onsubmit={addAlias} class="flex flex-col md:flex-row items-stretch md:items-center gap-2 md:gap-3 w-full">
+          <div class="flex items-center gap-2 md:contents">
+            <Input
+              type="text"
+              bind:value={newAliasKeyword}
+              placeholder="keyword..."
+              class="w-24 md:w-[120px] h-9 px-3 bg-card-surface border-[2px] border-border-brand-muted font-fira text-xs text-text-brand shadow-none focus-visible:ring-0 focus-visible:border-hister-indigo"
+            />
+            <Input
+              type="text"
+              bind:value={newAliasValue}
+              placeholder="expands to..."
+              class="flex-1 h-9 px-3 bg-card-surface border-[2px] border-border-brand-muted font-fira text-xs text-text-brand shadow-none focus-visible:ring-0 focus-visible:border-hister-indigo"
+            />
+          </div>
           <Button
             type="submit"
             size="sm"
-            class="bg-hister-indigo text-white font-inter text-lg font-bold border-0 hover:bg-hister-indigo/90 shadow-none gap-1.5 leading-none"
+            class="bg-hister-indigo text-white font-inter text-sm font-bold border-0 hover:bg-hister-indigo/90 shadow-none gap-1.5 leading-none"
           >
             <Plus class="size-3.5 shrink-0" />
             <span>Add</span>
@@ -236,71 +262,101 @@
     <!-- Indexing Rules Card -->
     <Card.Root class="bg-card-surface border-[2px] border-border-brand-muted rounded-none py-0 gap-0 overflow-hidden">
       <Card.Header class="flex-row items-center justify-between px-4 py-3 bg-hister-coral gap-2">
-        <Card.Title class="font-outfit text-lg font-extrabold text-white">Indexing Rules</Card.Title>
-        <span class="font-inter text-lg font-medium text-white/70">{ruleRows.length} rules</span>
+        <Card.Title class="font-outfit text-base md:text-lg font-extrabold text-white">Indexing Rules</Card.Title>
+        <span class="font-inter text-sm md:text-base font-medium text-white/70">{ruleRows.length} rules</span>
       </Card.Header>
 
       <Card.Content class="p-0">
-        <Table.Root>
-          <Table.Header>
-            <Table.Row class="bg-muted-surface border-b-[2px] border-border-brand-muted hover:bg-muted-surface">
-              <Table.Head class="font-inter text-xs font-bold text-text-brand-muted px-4 py-2 h-auto">Pattern</Table.Head>
-              <Table.Head class="font-inter text-xs font-bold text-text-brand-muted px-4 py-2 h-auto w-24">Type</Table.Head>
-              <Table.Head class="w-8 px-4 py-2 h-auto"></Table.Head>
-            </Table.Row>
-          </Table.Header>
-          <Table.Body>
-            {#each ruleRows as row}
-              <Table.Row class="border-b-[2px] border-border-brand-muted">
-                <Table.Cell class="font-fira text-lg text-text-brand truncate px-4 py-2.5 max-w-0">{row.pattern}</Table.Cell>
-                <Table.Cell class="px-4 py-2.5 w-24">
-                  <Badge
-                    variant="default"
-                    class="text-lg font-bold px-2.5 py-0.5 border-0 {row.type === 'skip' ? 'bg-hister-rose text-white' : 'bg-hister-teal text-white'}"
-                  >
-                    {row.type === 'skip' ? 'Skip' : 'Priority'}
-                  </Badge>
-                </Table.Cell>
-                <Table.Cell class="w-8 px-4 py-2.5">
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    class="shrink-0 text-text-brand-muted hover:text-hister-rose"
-                    onclick={() => removeRule(row.pattern, row.type)}
-                  >
-                    <Trash2 class="size-4" />
-                  </Button>
-                </Table.Cell>
+        <!-- Desktop table -->
+        <div class="hidden md:block">
+          <Table.Root>
+            <Table.Header>
+              <Table.Row class="bg-muted-surface border-b-[2px] border-border-brand-muted hover:bg-muted-surface">
+                <Table.Head class="font-inter text-xs font-bold text-text-brand-muted px-4 py-2 h-auto">Pattern</Table.Head>
+                <Table.Head class="font-inter text-xs font-bold text-text-brand-muted px-4 py-2 h-auto w-24">Type</Table.Head>
+                <Table.Head class="w-8 px-4 py-2 h-auto"></Table.Head>
               </Table.Row>
-            {/each}
-          </Table.Body>
-        </Table.Root>
+            </Table.Header>
+            <Table.Body>
+              {#each ruleRows as row}
+                <Table.Row class="border-b-[2px] border-border-brand-muted">
+                  <Table.Cell class="font-fira text-sm text-text-brand truncate px-4 py-2.5 max-w-0">{row.pattern}</Table.Cell>
+                  <Table.Cell class="px-4 py-2.5 w-24">
+                    <Badge
+                      variant="default"
+                      class="text-xs font-bold px-2.5 py-0.5 border-0 {row.type === 'skip' ? 'bg-hister-rose text-white' : 'bg-hister-teal text-white'}"
+                    >
+                      {row.type === 'skip' ? 'Skip' : 'Priority'}
+                    </Badge>
+                  </Table.Cell>
+                  <Table.Cell class="w-8 px-4 py-2.5">
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      class="shrink-0 text-text-brand-muted hover:text-hister-rose"
+                      onclick={() => removeRule(row.pattern, row.type)}
+                    >
+                      <Trash2 class="size-4" />
+                    </Button>
+                  </Table.Cell>
+                </Table.Row>
+              {/each}
+            </Table.Body>
+          </Table.Root>
+        </div>
+
+        <!-- Mobile stacked list -->
+        <div class="md:hidden divide-y-[2px] divide-border-brand-muted">
+          {#each ruleRows as row}
+            <div class="flex items-center gap-2 px-3 py-2.5">
+              <div class="flex-1 min-w-0">
+                <span class="font-fira text-sm text-text-brand block truncate">{row.pattern}</span>
+              </div>
+              <Badge
+                variant="default"
+                class="text-xs font-bold px-2 py-0.5 border-0 shrink-0 {row.type === 'skip' ? 'bg-hister-rose text-white' : 'bg-hister-teal text-white'}"
+              >
+                {row.type === 'skip' ? 'Skip' : 'Priority'}
+              </Badge>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                class="shrink-0 text-text-brand-muted hover:text-hister-rose"
+                onclick={() => removeRule(row.pattern, row.type)}
+              >
+                <Trash2 class="size-4" />
+              </Button>
+            </div>
+          {/each}
+        </div>
 
         {#if ruleRows.length === 0}
           <p class="px-4 py-4 text-center font-inter text-sm text-text-brand-muted">No rules defined yet.</p>
         {/if}
       </Card.Content>
 
-      <Card.Footer class="px-4 py-2.5 bg-muted-surface">
-        <div class="flex items-center gap-3 w-full">
-          <Input
-            type="text"
-            bind:value={newRulePattern}
-            placeholder="Enter regex pattern..."
-            class="flex-1 h-9 px-3 bg-card-surface border-[2px] border-border-brand-muted font-fira text-xs text-text-brand shadow-none focus-visible:ring-0 focus-visible:border-hister-coral"
-          />
-          <select
-            bind:value={newRuleType}
-            class="h-9 px-3 w-[100px] bg-card-surface border-[2px] border-border-brand-muted font-inter text-xs font-semibold text-text-brand outline-none cursor-pointer appearance-none text-center"
-          >
-            <option value="skip">Skip</option>
-            <option value="priority">Priority</option>
-          </select>
+      <Card.Footer class="px-3 md:px-4 py-2.5 bg-muted-surface">
+        <div class="flex flex-col md:flex-row items-stretch md:items-center gap-2 md:gap-3 w-full">
+          <div class="flex items-center gap-2 md:contents">
+            <Input
+              type="text"
+              bind:value={newRulePattern}
+              placeholder="Enter regex pattern..."
+              class="flex-1 h-9 px-3 bg-card-surface border-[2px] border-border-brand-muted font-fira text-xs text-text-brand shadow-none focus-visible:ring-0 focus-visible:border-hister-coral"
+            />
+            <select
+              bind:value={newRuleType}
+              class="h-9 px-3 w-[90px] md:w-[100px] bg-card-surface border-[2px] border-border-brand-muted font-inter text-xs font-semibold text-text-brand outline-none cursor-pointer appearance-none text-center shrink-0"
+            >
+              <option value="skip">Skip</option>
+              <option value="priority">Priority</option>
+            </select>
+          </div>
           <Button
             type="button"
             size="sm"
             onclick={addRule}
-            class="bg-hister-coral text-white font-inter text-lg font-bold border-0 hover:bg-hister-coral/90 shadow-none gap-1.5 leading-none"
+            class="bg-hister-coral text-white font-inter text-sm font-bold border-0 hover:bg-hister-coral/90 shadow-none gap-1.5 leading-none"
           >
             <Plus class="size-3.5 shrink-0" />
             <span>Add</span>

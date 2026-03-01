@@ -1,9 +1,10 @@
 package client
 
 type HistoryEntry struct {
-	Query string `json:"query"`
-	Title string `json:"title"`
-	URL   string `json:"url"`
+	Query     string `json:"query"`
+	Title     string `json:"title"`
+	URL       string `json:"url"`
+	UpdatedAt string `json:"updated_at"`
 }
 
 type historyRequest struct {

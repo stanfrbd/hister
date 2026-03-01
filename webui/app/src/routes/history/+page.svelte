@@ -6,8 +6,8 @@
   import { Badge } from '@hister/components/ui/badge';
   import { Separator } from '@hister/components/ui/separator';
   import { ScrollArea } from '@hister/components/ui/scroll-area';
-  import * as Alert from '@hister/components/ui/alert';
-  import { Search, Clock, Trash2, AlertCircle } from 'lucide-svelte';
+  import StatusMessage from '$lib/components/StatusMessage.svelte';
+  import { Search, Clock, Trash2 } from 'lucide-svelte';
 
   interface HistoryItem {
     query: string;
@@ -170,47 +170,43 @@
   <title>Hister - History</title>
 </svelte:head>
 
-<header class="flex items-center justify-between px-6 py-3 bg-card-surface border-b-[2px] border-border-brand-muted shrink-0">
-  <h1 class="font-outfit text-lg font-extrabold text-text-brand">Search History</h1>
-  <nav class="flex items-center gap-3">
-    <div class="flex items-center gap-2 h-8 px-3 border-[2px] border-border-brand-muted bg-page-bg">
+<header class="flex items-center justify-between px-3 md:px-6 py-3 bg-card-surface border-b-[2px] border-border-brand-muted shrink-0 gap-2">
+  <h1 class="font-outfit text-base md:text-lg font-extrabold text-text-brand shrink-0">Search History</h1>
+  <nav class="flex items-center gap-2 md:gap-3 min-w-0">
+    <div class="flex items-center gap-2 h-8 px-3 border-[2px] border-border-brand-muted bg-page-bg min-w-0">
       <Search class="size-3.5 text-text-brand-muted shrink-0" />
       <Input
         bind:value={filter}
         placeholder="Filter..."
-        class="w-40 h-full bg-transparent font-inter text-xs font-medium text-text-brand placeholder:text-text-brand-muted border-0 shadow-none focus-visible:ring-0 p-0"
+        class="w-24 md:w-40 h-full bg-transparent font-inter text-xs font-medium text-text-brand placeholder:text-text-brand-muted border-0 shadow-none focus-visible:ring-0 p-0"
       />
     </div>
     {#if items.length > 0}
       <Button
         variant="outline"
         size="sm"
-        class="border-[2px] border-hister-rose text-hister-rose hover:bg-hister-rose/10 font-inter text-xs font-semibold h-8 gap-1.5"
+        class="border-[2px] border-hister-rose text-hister-rose hover:bg-hister-rose/10 font-inter text-xs font-semibold h-8 gap-1.5 shrink-0"
         onclick={deleteAllHistory}
       >
         <Trash2 class="size-3.5" />
-        Delete All
+        <span class="hidden md:inline">Delete All</span>
       </Button>
     {/if}
   </nav>
 </header>
 
 {#if loading}
-  <p class="font-inter text-sm text-text-brand-muted text-center py-8">Loading history...</p>
+  <StatusMessage message="Loading history..." type="loading" />
 {:else if error}
-  <div class="px-6 py-4">
-    <Alert.Root variant="destructive" class="border-[2px] border-hister-rose bg-hister-rose/10 text-hister-rose rounded-none">
-      <AlertCircle class="size-4" />
-      <Alert.Description class="font-inter text-sm">{error}</Alert.Description>
-    </Alert.Root>
-  </div>
+  <StatusMessage message={error} type="error" className="mx-3 md:mx-6 mt-4" />
 {:else if filteredItems.length === 0}
-  <p class="font-inter text-sm text-text-brand-muted text-center py-8">{filter ? 'No matching entries' : 'No history yet'}</p>
+  <StatusMessage message={filter ? 'No matching entries' : 'No history yet'} type="empty" />
 {:else}
-  <div class="flex flex-1 min-h-0">
-    <ScrollArea class="w-[360px] shrink-0 border-r-[2px] border-border-brand-muted pt-5 pr-3">
+  <div class="flex flex-col md:flex-row flex-1 min-h-0">
+    <!-- Timeline sidebar: hidden on mobile, shown on md+ -->
+    <ScrollArea class="hidden md:block w-[280px] shrink-0 border-r-[2px] border-border-brand-muted pt-5 pr-3">
       <div class="space-y-1">
-        <span class="font-space text-lg font-bold tracking-[2px] text-text-brand-muted px-2.5 flex items-center gap-1.5">
+        <span class="font-space text-xs font-bold tracking-[2px] text-text-brand-muted px-2.5 flex items-center gap-1.5">
           <Clock class="size-3" />
           TIMELINE
         </span>
@@ -218,15 +214,15 @@
 
         <Button
           variant="ghost"
-          class="flex items-center gap-2 w-full py-2 px-2.5 justify-start h-auto rounded-none {!filterByDate ? 'bg-[var(--hister-indigo)] text-white hover:bg-[var(--hister-indigo)]/90 hover:text-white' : 'hover:bg-muted-surface'}"
+          class="flex items-center gap-2 w-full py-1.5 px-2.5 justify-start h-auto rounded-none {!filterByDate ? 'bg-[var(--hister-indigo)] text-white hover:bg-[var(--hister-indigo)]/90 hover:text-white' : 'hover:bg-muted-surface'}"
           onclick={showAll}
         >
-          <span class="font-inter text-lg font-semibold" class:text-text-brand-secondary={!!filterByDate}>
+          <span class="font-inter text-sm font-semibold" class:text-text-brand-secondary={!!filterByDate}>
             Show All
           </span>
           <Badge
             variant="secondary"
-            class="ml-auto shrink-0 text-lg px-1.5 py-0 h-4 border-0 {filterByDate ? 'bg-muted-surface text-text-brand-muted' : 'bg-white/20 text-white'}"
+            class="ml-auto shrink-0 text-xs px-1.5 py-0 h-4 border-0 {filterByDate ? 'bg-muted-surface text-text-brand-muted' : 'bg-white/20 text-white'}"
           >
             {filteredItems.length}
           </Badge>
@@ -239,7 +235,7 @@
           {@const isActive = filterByDate === group.key}
           <Button
             variant="ghost"
-            class="flex items-center gap-2 w-full py-2 px-2.5 justify-start h-auto rounded-none {isActive ? 'text-white hover:text-white' : 'hover:bg-muted-surface'}"
+            class="flex items-center gap-2 w-full py-1.5 px-2.5 justify-start h-auto rounded-none {isActive ? 'text-white hover:text-white' : 'hover:bg-muted-surface'}"
             style={isActive ? `background-color: ${getColorVar(color)};` : ''}
             onclick={() => scrollToGroup(group.key)}
           >
@@ -248,7 +244,7 @@
               style={isActive ? 'background-color: white;' : `background-color: ${getColorVar(color)};`}
             ></span>
             <span
-              class="font-inter text-lg truncate"
+              class="font-inter text-sm truncate"
               class:font-semibold={isActive}
               class:font-medium={!isActive}
               class:text-text-brand-secondary={!isActive}
@@ -257,7 +253,7 @@
             </span>
             <Badge
               variant="secondary"
-              class="ml-auto shrink-0 px-1.5 py-0 h-4 border-0 {isActive ? 'bg-white/20 text-white' : 'bg-muted-surface text-text-brand-muted'}"
+              class="ml-auto shrink-0 text-xs px-1.5 py-0 h-4 border-0 {isActive ? 'bg-white/20 text-white' : 'bg-muted-surface text-text-brand-muted'}"
             >
               {group.items.length}
             </Badge>
@@ -266,7 +262,33 @@
       </div>
     </ScrollArea>
 
-    <ScrollArea class="flex-1 min-w-0 px-6 py-5 space-y-6">
+    <!-- Mobile timeline: horizontal scrollable filter chips -->
+    <div class="flex md:hidden items-center gap-2 px-4 py-2 overflow-x-auto border-b-[2px] border-border-brand-muted bg-card-surface shrink-0">
+      <Button
+        variant="ghost"
+        size="sm"
+        class="shrink-0 text-xs font-inter font-semibold h-7 px-2.5 rounded-none {!filterByDate ? 'bg-hister-indigo text-white hover:bg-hister-indigo/90 hover:text-white' : 'text-text-brand-secondary hover:bg-muted-surface'}"
+        onclick={showAll}
+      >
+        All ({filteredItems.length})
+      </Button>
+      {#each allGroups as group, i}
+        {@const color = getGroupColor(i)}
+        {@const isActive = filterByDate === group.key}
+        <Button
+          variant="ghost"
+          size="sm"
+          class="shrink-0 text-xs font-inter font-medium h-7 px-2.5 rounded-none {isActive ? 'text-white hover:text-white' : 'text-text-brand-secondary hover:bg-muted-surface'}"
+          style={isActive ? `background-color: ${getColorVar(color)};` : ''}
+          onclick={() => scrollToGroup(group.key)}
+        >
+          {group.label} ({group.items.length})
+        </Button>
+      {/each}
+    </div>
+
+    <ScrollArea class="flex-1 min-w-0">
+      <div class="w-full overflow-x-hidden px-3 md:px-6 py-3 md:py-5 space-y-4 md:space-y-6">
       {#each groups as group, gi}
         {@const color = getGroupColor(gi)}
         <div id="group-{encodeURIComponent(group.key)}" class="space-y-2">
@@ -277,30 +299,30 @@
             {#each group.items as item, ii}
               {@const itemColor = getGroupColor(gi + ii)}
               <article
-                class="flex items-center gap-3 py-2.5 px-3.5 bg-card-surface border-b-[2px] border-b-border-brand-muted overflow-hidden"
+                class="flex items-start md:items-center gap-2 md:gap-3 py-2 md:py-2.5 px-2.5 md:px-3.5 bg-card-surface border-b-[2px] border-b-border-brand-muted overflow-hidden"
                 style="border-left: 3px solid {getColorVar(itemColor)};"
               >
-                <div class="flex-1 min-w-0 space-y-0.5">
+                <div class="flex-1 min-w-0 w-0 space-y-0.5">
                   <a
                     href={item.url}
-                    class="font-outfit text-lg font-bold hover:underline block truncate no-underline"
+                    class="font-outfit text-sm md:text-base font-bold hover:underline block truncate no-underline"
                     style="color: {getColorVar(itemColor)};"
                     target="_blank"
                     rel="noopener"
                   >
-                    {item.title || item.url}
+                    {(item.title || item.url).replace(/<[^>]*>/g, '')}
                   </a>
-                  <span class="font-fira text-lg text-text-brand-muted block truncate" title={item.url}>{item.url}</span>
+                  <span class="font-fira text-xs md:text-sm text-text-brand-muted block truncate" title={item.url}>{item.url}</span>
                 </div>
                 <nav class="flex items-center gap-1 shrink-0">
                   <Button
                     variant="ghost"
                     size="sm"
-                    class="text-xs font-inter text-text-brand-muted shrink-0 hover:text-hister-indigo gap-1.5 h-7 px-2 no-underline"
-                    href="./?q={encodeURIComponent(item.query)}"
+                    class="text-xs font-inter text-text-brand-muted shrink-0 hover:text-hister-indigo gap-1 h-7 px-1.5 md:px-2 no-underline"
+                    href="/?q={encodeURIComponent(item.query)}"
                   >
                     <Search class="size-3" />
-                    Search
+                    <span class="hidden md:inline">Search</span>
                   </Button>
                   <Button
                     variant="ghost"
@@ -316,6 +338,7 @@
           </div>
         </div>
       {/each}
+      </div>
     </ScrollArea>
   </div>
 {/if}
