@@ -49,12 +49,12 @@ type WsDisconnectedMsg struct{ Err error }
 type ReconnectMsg struct{}
 type HintClearMsg struct{}
 type SettingsErrClearMsg struct{}
-type HistoryFetchedMsg struct{ Items []HistoryEntry }
+type HistoryFetchedMsg struct{ Items []HistoryItem }
 type RulesFetchedMsg struct{ Data RulesResponse }
 type AddResultMsg struct{ Err error }
 type RulesSavedMsg struct{ Err error }
 
-type HistoryEntry = client.HistoryEntry
+type HistoryItem = client.HistoryItem
 
 type RulesResponse = client.RulesResponse
 

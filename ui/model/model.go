@@ -117,7 +117,7 @@ type Model struct {
 	ActiveTab int // 0=Search, 1=History, 2=Rules, 3=Add
 
 	// History tab
-	HistoryItems   []HistoryEntry
+	HistoryItems   []HistoryItem
 	HistoryIdx     int
 	HistoryLoading bool
 
