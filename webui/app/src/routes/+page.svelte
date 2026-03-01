@@ -547,7 +547,7 @@
 <Button
   variant="outline"
   size="icon"
-  class="fixed bottom-14 right-6 z-30 bg-card-surface border-[2px] border-border-brand-muted text-text-brand-muted hover:border-hister-indigo hover:text-hister-indigo shadow-[3px_3px_0px_var(--border-brand)] hover:shadow-[3px_3px_0px_var(--hister-indigo)] transition-all rounded-none"
+  class="fixed bottom-14 right-6 z-30 bg-card-surface border-[3px] border-brutal-border text-text-brand-muted hover:border-hister-indigo hover:text-hister-indigo shadow-[4px_4px_0_var(--brutal-shadow)] hover:shadow-[2px_2px_0_var(--brutal-shadow)] hover:translate-x-[2px] hover:translate-y-[2px] transition-all rounded-none"
   onclick={() => { showHelp = !showHelp; }}
   title="Keyboard shortcuts (?)"
   aria-label="Show keyboard shortcuts"
@@ -557,7 +557,7 @@
 
 {#if isSearching}
   <div class="flex-1 flex flex-col min-h-0">
-    <div class="search flex items-center gap-3 shrink-0 h-10 md:h-14 px-4 bg-card-surface border-b-[2px] border-border-brand-muted">
+    <div class="search flex items-center gap-3 shrink-0 h-10 md:h-14 px-4 bg-card-surface border-b-[3px] border-brutal-border">
       <Search class="size-4 md:size-6 text-text-brand-muted" />
       <Input
         bind:ref={inputEl}
@@ -621,7 +621,7 @@
         {#if lastResults?.history?.length}
           {#each lastResults.history as r, i}
             {@const favSrc = getFaviconSrc(r.favicon, r.url)}
-            <article data-result class="flex gap-3 py-3.5 border-b-[2px] border-border-brand-muted w-full overflow-hidden transition-all duration-150"
+            <article data-result class="flex gap-3 py-3.5 border-b-[3px] border-brutal-border w-full overflow-hidden transition-all duration-150"
               style={i === highlightIdx ? 'background: linear-gradient(90deg, transparent, rgba(90, 138, 138, 0.12), transparent); border-left: 3px solid var(--hister-teal); padding-left: 0.75rem;' : ''}>
               <div class="w-5 h-5 shrink-0 flex items-center justify-center mt-0.5 overflow-hidden bg-hister-teal">
                 {#if favSrc}
@@ -653,7 +653,7 @@
               </Button>
             </article>
             {#if showActionsForResult === 'history:' + r.url}
-              <Card.Root class="ml-8 border-[2px] border-border-brand-muted bg-card-surface rounded-none py-3 gap-2">
+              <Card.Root class="ml-8 border-[3px] border-brutal-border bg-card-surface rounded-none py-3 gap-2 shadow-[3px_3px_0_var(--brutal-shadow)]">
                 <Card.Content class="space-y-2">
                   <Button variant="outline" size="sm" class="text-xs border-[2px] border-hister-rose text-hister-rose hover:bg-hister-rose/10" onclick={() => updatePriorityResult(r.url, r.title || '*title*', true)}>
                     <PinOff class="size-3.5" />
@@ -673,7 +673,7 @@
             {@const idx = historyLen + i}
             {@const color = "hister-cyan" }
             {@const favSrc = getFaviconSrc(r.favicon, r.url)}
-            <article data-result class="flex gap-3 py-3.5 border-b-[2px] border-border-brand-muted w-full overflow-hidden transition-all duration-150"
+            <article data-result class="flex gap-3 py-3.5 border-b-[3px] border-brutal-border w-full overflow-hidden transition-all duration-150"
               style={idx === highlightIdx ? `background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--${color}) 12%, transparent), transparent); border-left: 3px solid var(--${color}); padding-left: 0.75rem;` : ''}>
               <div class="w-5 h-5 shrink-0 flex items-center justify-center mt-0.5 overflow-hidden" style="background-color: var(--{color});">
                 {#if favSrc}
@@ -710,7 +710,7 @@
               </Button>
             </article>
             {#if showActionsForResult === 'doc:' + r.url}
-              <Card.Root class="ml-8 border-[2px] border-border-brand-muted bg-card-surface rounded-none py-3 gap-2">
+              <Card.Root class="ml-8 border-[3px] border-brutal-border bg-card-surface rounded-none py-3 gap-2 shadow-[3px_3px_0_var(--brutal-shadow)]">
                 <Card.Content class="space-y-2">
                   <div class="flex items-center gap-2">
                     <Input bind:value={actionsQuery} placeholder="Query for priority..." class="flex-1 h-7 text-sm font-inter border-[2px] border-border-brand-muted shadow-none focus-visible:ring-0 focus-visible:border-hister-indigo" />
@@ -772,7 +772,7 @@
     </p>
     <div
       bind:this={underlineEl}
-      class="h-[2px] w-48"
+      class="h-[3px] w-48"
       style="background: linear-gradient(90deg, var(--hister-indigo), var(--hister-coral), var(--hister-teal)); transform: scaleX(0); transform-origin: left;"
     ></div>
 
@@ -801,7 +801,7 @@
           {@const chip = chipColors[i % chipColors.length]}
           <Button
             variant="outline"
-            class="border-[2px] {chip.border} {chip.bg} px-3.5 py-1.5 font-inter text-sm font-semibold {chip.text} hover:opacity-90 hover:scale-105 hover:-translate-y-0.5 transition-all duration-200 h-auto rounded-none"
+            class="border-[3px] {chip.border} {chip.bg} px-3.5 py-1.5 font-inter text-sm font-semibold {chip.text} shadow-[3px_3px_0_var(--brutal-shadow)] hover:shadow-[1px_1px_0_var(--brutal-shadow)] hover:translate-x-[2px] hover:translate-y-[2px] transition-all duration-200 h-auto rounded-none"
             onclick={() => clickChip(search)}
             oncontextmenu={(e) => showChipContextMenu(e, search)}
           >
@@ -828,7 +828,7 @@
         oncontextmenu={(e) => { e.preventDefault(); contextMenuSearch = null; }}
       ></div>
       <div
-        class="fixed z-50 border-[2px] border-border-brand bg-card-surface shadow-[4px_4px_0px_var(--hister-indigo)] py-1 min-w-[160px]"
+        class="fixed z-50 border-[3px] border-brutal-border bg-card-surface shadow-[4px_4px_0_var(--brutal-shadow)] py-1 min-w-[160px]"
         style="left: {contextMenuPos.x}px; top: {contextMenuPos.y}px;"
       >
         <Button
@@ -850,17 +850,17 @@
     {/if}
 
     <div bind:this={statsRowEl} class="flex items-center gap-8 flex-col md:flex-row">
-      <div class="flex items-center gap-2 text-hister-indigo">
+      <div class="flex items-center gap-2 text-hister-indigo border-[3px] border-brutal-border px-4 py-2 shadow-[3px_3px_0_var(--brutal-shadow)]">
         <History class="size-[18px]" />
         <span class="font-outfit text-xl font-extrabold">{displayHistoryCount}</span>
         <span class="font-inter text-sm">indexed pages</span>
       </div>
-      <div class="flex items-center gap-2 text-hister-teal">
+      <div class="flex items-center gap-2 text-hister-teal border-[3px] border-brutal-border px-4 py-2 shadow-[3px_3px_0_var(--brutal-shadow)]">
         <Shield class="size-[18px]" />
         <span class="font-outfit text-xl font-extrabold">{displayRulesCount}</span>
         <span class="font-inter text-sm">active rules</span>
       </div>
-      <div class="flex items-center gap-2 text-hister-coral">
+      <div class="flex items-center gap-2 text-hister-coral border-[3px] border-brutal-border px-4 py-2 shadow-[3px_3px_0_var(--brutal-shadow)]">
         <Link2 class="size-[18px]" />
         <span class="font-outfit text-xl font-extrabold">{displayAliasesCount}</span>
         <span class="font-inter text-sm">aliases</span>

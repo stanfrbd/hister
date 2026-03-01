@@ -11,7 +11,7 @@
     } = $props();
 </script>
 
-<div class="flex items-center gap-3 h-11 px-4 bg-card-surface border-b-[2px] border-border-brand-muted">
+<div class="flex items-center gap-3 h-11 px-4 bg-card-surface border-b-[3px] border-brutal-border">
     <Search class="size-4 text-text-brand-muted shrink-0" />
     <Input
       bind:value

@@ -141,15 +141,15 @@
   <!-- Header -->
   <div class="flex flex-col md:flex-row md:items-center justify-between gap-2">
     <div class="space-y-1">
-      <h1 class="font-outfit text-lg md:text-xl font-extrabold text-text-brand">Search Rules & Aliases</h1>
+      <h1 class="flex items-center gap-2"><span class="w-1.5 h-8 bg-hister-coral"></span><span class="font-space text-lg md:text-xl tracking-[1px] font-extrabold text-text-brand">SEARCH RULES & ALIASES</span></h1>
       <p class="font-inter text-xs md:text-sm text-text-brand-secondary">Configure how Hister indexes and searches your browsing history</p>
     </div>
     <div class="flex items-center gap-2 md:gap-4">
-      <Badge variant="outline" class="border-[2px] border-border-brand-muted bg-muted-surface text-text-brand-secondary font-inter text-xs font-semibold gap-1.5 px-2 md:px-3 py-1 md:py-1.5">
+      <Badge variant="outline" class="border-[3px] border-brutal-border bg-muted-surface text-text-brand-secondary font-inter text-xs font-semibold gap-1.5 px-2 md:px-3 py-1 md:py-1.5">
         <Shield class="size-3.5 text-hister-coral" />
         {ruleRows.length} rules
       </Badge>
-      <Badge variant="outline" class="border-[2px] border-border-brand-muted bg-muted-surface text-text-brand-secondary font-inter text-xs font-semibold gap-1.5 px-2 md:px-3 py-1 md:py-1.5">
+      <Badge variant="outline" class="border-[3px] border-brutal-border bg-muted-surface text-text-brand-secondary font-inter text-xs font-semibold gap-1.5 px-2 md:px-3 py-1 md:py-1.5">
         <Link2 class="size-3.5 text-hister-indigo" />
         {Object.keys(rules.aliases).length} aliases
       </Badge>
@@ -157,7 +157,7 @@
   </div>
 
   {#if message}
-    <Alert.Root class="border-[2px] rounded-none {isError ? 'border-hister-rose bg-hister-rose/10 text-hister-rose' : 'border-hister-teal bg-hister-teal/10 text-hister-teal'}">
+    <Alert.Root class="border-[3px] rounded-none {isError ? 'border-hister-rose bg-hister-rose/10 text-hister-rose' : 'border-hister-teal bg-hister-teal/10 text-hister-teal'}">
       {#if isError}
         <AlertCircle class="size-4" />
       {:else}
@@ -171,7 +171,7 @@
     <p class="font-inter text-sm text-text-brand-muted text-center py-8">Loading rules...</p>
   {:else}
     <!-- Search Aliases Card -->
-    <Card.Root class="bg-card-surface border-[2px] border-border-brand-muted rounded-none py-0 gap-0 overflow-hidden">
+    <Card.Root class="bg-card-surface border-[3px] border-brutal-border rounded-none py-0 gap-0 overflow-hidden shadow-[5px_5px_0_var(--brutal-shadow)]">
       <Card.Header class="flex-row items-center justify-between px-4 py-3 bg-hister-indigo gap-2">
         <Card.Title class="font-outfit text-base md:text-lg font-extrabold text-white">Search Aliases</Card.Title>
         <span class="font-inter text-sm md:text-base font-medium text-white/70">{Object.keys(rules.aliases).length} aliases</span>
@@ -182,7 +182,7 @@
         <div class="hidden md:block">
           <Table.Root>
             <Table.Header>
-              <Table.Row class="bg-muted-surface border-b-[2px] border-border-brand-muted hover:bg-muted-surface">
+              <Table.Row class="bg-muted-surface border-b-[3px] border-brutal-border hover:bg-muted-surface">
                 <Table.Head class="font-inter text-xs font-bold text-text-brand-muted w-[120px] px-4 py-2 h-auto">Keyword</Table.Head>
                 <Table.Head class="font-inter text-xs font-bold text-text-brand-muted px-4 py-2 h-auto">Expands To</Table.Head>
                 <Table.Head class="w-8 px-4 py-2 h-auto"></Table.Head>
@@ -190,7 +190,7 @@
             </Table.Header>
             <Table.Body>
               {#each Object.entries(rules.aliases) as [keyword, value]}
-                <Table.Row class="border-b-[2px] border-border-brand-muted">
+                <Table.Row class="border-b-[3px] border-brutal-border">
                   <Table.Cell class="font-fira text-sm font-semibold text-text-brand w-[120px] px-4 py-2.5">{keyword}</Table.Cell>
                   <Table.Cell class="font-fira text-sm text-text-brand-secondary truncate px-4 py-2.5 max-w-0">{value}</Table.Cell>
                   <Table.Cell class="w-8 px-4 py-2.5">
@@ -210,7 +210,7 @@
         </div>
 
         <!-- Mobile stacked list -->
-        <div class="md:hidden divide-y-[2px] divide-border-brand-muted">
+        <div class="md:hidden divide-y-[3px] divide-brutal-border">
           {#each Object.entries(rules.aliases) as [keyword, value]}
             <div class="flex items-center gap-2 px-3 py-2.5">
               <div class="flex-1 min-w-0">
@@ -238,13 +238,13 @@
               type="text"
               bind:value={newAliasKeyword}
               placeholder="keyword..."
-              class="w-24 md:w-[120px] h-9 px-3 bg-card-surface border-[2px] border-border-brand-muted font-fira text-xs text-text-brand shadow-none focus-visible:ring-0 focus-visible:border-hister-indigo"
+              class="w-24 md:w-[120px] h-9 px-3 bg-card-surface border-[3px] border-brutal-border font-fira text-xs text-text-brand shadow-none focus-visible:ring-0 focus-visible:border-hister-indigo"
             />
             <Input
               type="text"
               bind:value={newAliasValue}
               placeholder="expands to..."
-              class="flex-1 h-9 px-3 bg-card-surface border-[2px] border-border-brand-muted font-fira text-xs text-text-brand shadow-none focus-visible:ring-0 focus-visible:border-hister-indigo"
+              class="flex-1 h-9 px-3 bg-card-surface border-[3px] border-brutal-border font-fira text-xs text-text-brand shadow-none focus-visible:ring-0 focus-visible:border-hister-indigo"
             />
           </div>
           <Button
@@ -260,7 +260,7 @@
     </Card.Root>
 
     <!-- Indexing Rules Card -->
-    <Card.Root class="bg-card-surface border-[2px] border-border-brand-muted rounded-none py-0 gap-0 overflow-hidden">
+    <Card.Root class="bg-card-surface border-[3px] border-brutal-border rounded-none py-0 gap-0 overflow-hidden shadow-[5px_5px_0_var(--brutal-shadow)]">
       <Card.Header class="flex-row items-center justify-between px-4 py-3 bg-hister-coral gap-2">
         <Card.Title class="font-outfit text-base md:text-lg font-extrabold text-white">Indexing Rules</Card.Title>
         <span class="font-inter text-sm md:text-base font-medium text-white/70">{ruleRows.length} rules</span>
@@ -271,7 +271,7 @@
         <div class="hidden md:block">
           <Table.Root>
             <Table.Header>
-              <Table.Row class="bg-muted-surface border-b-[2px] border-border-brand-muted hover:bg-muted-surface">
+              <Table.Row class="bg-muted-surface border-b-[3px] border-brutal-border hover:bg-muted-surface">
                 <Table.Head class="font-inter text-xs font-bold text-text-brand-muted px-4 py-2 h-auto">Pattern</Table.Head>
                 <Table.Head class="font-inter text-xs font-bold text-text-brand-muted px-4 py-2 h-auto w-24">Type</Table.Head>
                 <Table.Head class="w-8 px-4 py-2 h-auto"></Table.Head>
@@ -279,7 +279,7 @@
             </Table.Header>
             <Table.Body>
               {#each ruleRows as row}
-                <Table.Row class="border-b-[2px] border-border-brand-muted">
+                <Table.Row class="border-b-[3px] border-brutal-border">
                   <Table.Cell class="font-fira text-sm text-text-brand truncate px-4 py-2.5 max-w-0">{row.pattern}</Table.Cell>
                   <Table.Cell class="px-4 py-2.5 w-24">
                     <Badge
@@ -306,7 +306,7 @@
         </div>
 
         <!-- Mobile stacked list -->
-        <div class="md:hidden divide-y-[2px] divide-border-brand-muted">
+        <div class="md:hidden divide-y-[3px] divide-brutal-border">
           {#each ruleRows as row}
             <div class="flex items-center gap-2 px-3 py-2.5">
               <div class="flex-1 min-w-0">
@@ -342,11 +342,11 @@
               type="text"
               bind:value={newRulePattern}
               placeholder="Enter regex pattern..."
-              class="flex-1 h-9 px-3 bg-card-surface border-[2px] border-border-brand-muted font-fira text-xs text-text-brand shadow-none focus-visible:ring-0 focus-visible:border-hister-coral"
+              class="flex-1 h-9 px-3 bg-card-surface border-[3px] border-brutal-border font-fira text-xs text-text-brand shadow-none focus-visible:ring-0 focus-visible:border-hister-coral"
             />
             <select
               bind:value={newRuleType}
-              class="h-9 px-3 w-[90px] md:w-[100px] bg-card-surface border-[2px] border-border-brand-muted font-inter text-xs font-semibold text-text-brand outline-none cursor-pointer appearance-none text-center shrink-0"
+              class="h-9 px-3 w-[90px] md:w-[100px] bg-card-surface border-[3px] border-brutal-border font-inter text-xs font-semibold text-text-brand outline-none cursor-pointer appearance-none text-center shrink-0"
             >
               <option value="skip">Skip</option>
               <option value="priority">Priority</option>

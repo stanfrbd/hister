@@ -46,7 +46,7 @@
 
 <div class="px-3 md:px-6 py-4 md:py-5 space-y-4 md:space-y-5 overflow-y-auto flex-1">
   <div class="space-y-1">
-    <h1 class="font-outfit text-lg md:text-xl font-extrabold text-text-brand">API Documentation</h1>
+    <h1 class="flex items-center gap-2"><span class="w-1.5 h-8 bg-hister-teal"></span><span class="font-space text-lg md:text-xl tracking-[1px] font-extrabold text-text-brand">API DOCUMENTATION</span></h1>
     <p class="font-inter text-xs md:text-sm text-text-brand-secondary">Available HTTP endpoints for integrating with Hister</p>
   </div>
 
@@ -57,7 +57,7 @@
       {#each endpoints as ep}
         <a
           href="#{slugify(ep.name, ep.method)}"
-          class="font-inter text-xs font-semibold text-hister-indigo hover:underline no-underline px-2 py-1 border-[2px] border-border-brand-muted bg-muted-surface hover:border-hister-indigo transition-colors"
+          class="font-inter text-xs font-semibold text-hister-indigo hover:underline no-underline px-2 py-1 border-[3px] border-brutal-border bg-muted-surface hover:border-hister-indigo shadow-[2px_2px_0_var(--brutal-shadow)] hover:shadow-[1px_1px_0_var(--brutal-shadow)] hover:translate-x-[1px] hover:translate-y-[1px] transition-all"
         >
           {ep.name}
         </a>
@@ -66,7 +66,7 @@
 
     <div class="space-y-4">
       {#each endpoints as ep}
-        <Card.Root id={slugify(ep.name, ep.method)} class="bg-card-surface border-[2px] border-border-brand-muted rounded-none py-0 gap-0 overflow-hidden">
+        <Card.Root id={slugify(ep.name, ep.method)} class="bg-card-surface border-[3px] border-brutal-border rounded-none py-0 gap-0 overflow-hidden shadow-[4px_4px_0_var(--brutal-shadow)]">
           <Card.Header class="flex-col md:flex-row md:items-center justify-between px-4 py-3 gap-2">
             <div class="space-y-1">
               <Card.Title class="font-outfit text-base font-extrabold text-text-brand">{ep.name}</Card.Title>
@@ -87,7 +87,7 @@
             </div>
           </Card.Header>
 
-          <Card.Content class="px-4 py-3 border-t-[2px] border-border-brand-muted">
+          <Card.Content class="px-4 py-3 border-t-[3px] border-brutal-border">
             <p class="font-inter text-sm text-text-brand-secondary">{ep.description}</p>
 
             {#if ep.args && ep.args.length > 0}
@@ -96,7 +96,7 @@
                 <div class="hidden md:block">
                   <Table.Root>
                     <Table.Header>
-                      <Table.Row class="bg-muted-surface border-b-[2px] border-border-brand-muted hover:bg-muted-surface">
+                      <Table.Row class="bg-muted-surface border-b-[3px] border-brutal-border hover:bg-muted-surface">
                         <Table.Head class="font-inter text-xs font-bold text-text-brand-muted px-3 py-2 h-auto">Name</Table.Head>
                         <Table.Head class="font-inter text-xs font-bold text-text-brand-muted px-3 py-2 h-auto">Type</Table.Head>
                         <Table.Head class="font-inter text-xs font-bold text-text-brand-muted px-3 py-2 h-auto">Required</Table.Head>
@@ -105,7 +105,7 @@
                     </Table.Header>
                     <Table.Body>
                       {#each ep.args as arg}
-                        <Table.Row class="border-b-[2px] border-border-brand-muted">
+                        <Table.Row class="border-b-[3px] border-brutal-border">
                           <Table.Cell class="font-fira text-sm font-semibold text-text-brand px-3 py-2"><code>{arg.name}</code></Table.Cell>
                           <Table.Cell class="font-fira text-sm text-text-brand-secondary px-3 py-2"><code>{arg.type}</code></Table.Cell>
                           <Table.Cell class="px-3 py-2">
@@ -119,7 +119,7 @@
                     </Table.Body>
                   </Table.Root>
                 </div>
-                <div class="md:hidden divide-y-[2px] divide-border-brand-muted">
+                <div class="md:hidden divide-y-[3px] divide-brutal-border">
                   {#each ep.args as arg}
                     <div class="py-2 space-y-1">
                       <div class="flex items-center gap-2">

@@ -164,10 +164,10 @@
   <title>Hister - History</title>
 </svelte:head>
 
-<header class="flex items-center justify-between px-3 md:px-6 py-3 bg-card-surface border-b-[2px] border-border-brand-muted shrink-0 gap-2">
-  <h1 class="font-outfit text-base md:text-lg font-extrabold text-text-brand shrink-0">Search History</h1>
+<header class="flex items-center justify-between px-3 md:px-6 py-3 bg-card-surface border-b-[3px] border-brutal-border shrink-0 gap-2">
+  <h1 class="flex items-center gap-2 shrink-0"><span class="w-1 h-6 bg-hister-indigo"></span><span class="font-space text-base md:text-lg tracking-[1px] font-extrabold text-text-brand">SEARCH HISTORY</span></h1>
   <nav class="flex items-center gap-2 md:gap-3 min-w-0">
-    <div class="flex items-center gap-2 h-8 px-3 border-[2px] border-border-brand-muted bg-page-bg min-w-0">
+    <div class="flex items-center gap-2 h-8 px-3 border-[3px] border-brutal-border bg-page-bg min-w-0">
       <Search class="size-3.5 text-text-brand-muted shrink-0" />
       <Input
         bind:value={filter}
@@ -179,7 +179,7 @@
       <Button
         variant="outline"
         size="sm"
-        class="border-[2px] border-hister-rose text-hister-rose hover:bg-hister-rose/10 font-inter text-xs font-semibold h-8 gap-1.5 shrink-0"
+        class="border-[3px] border-hister-rose text-hister-rose hover:bg-hister-rose/10 font-inter text-xs font-semibold h-8 gap-1.5 shrink-0 shadow-[3px_3px_0_var(--brutal-shadow)] hover:shadow-[1px_1px_0_var(--brutal-shadow)] hover:translate-x-[2px] hover:translate-y-[2px] transition-all"
         onclick={deleteAllHistory}
       >
         <Trash2 class="size-3.5" />
@@ -198,7 +198,7 @@
 {:else}
   <div class="flex flex-col md:flex-row flex-1 min-h-0">
     <!-- Timeline sidebar: hidden on mobile, shown on md+ -->
-    <ScrollArea class="hidden md:block w-[280px] shrink-0 border-r-[2px] border-border-brand-muted pt-5 pr-3">
+    <ScrollArea class="hidden md:block w-[280px] shrink-0 border-r-[3px] border-brutal-border pt-5 pr-3">
       <div class="space-y-1">
         <span class="font-space text-xs font-bold tracking-[2px] text-text-brand-muted px-2.5 flex items-center gap-1.5">
           <Clock class="size-3" />
@@ -257,7 +257,7 @@
     </ScrollArea>
 
     <!-- Mobile timeline: horizontal scrollable filter chips -->
-    <div class="flex md:hidden items-center gap-2 px-4 py-2 overflow-x-auto border-b-[2px] border-border-brand-muted bg-card-surface shrink-0">
+    <div class="flex md:hidden items-center gap-2 px-4 py-2 overflow-x-auto border-b-[3px] border-brutal-border bg-card-surface shrink-0">
       <Button
         variant="ghost"
         size="sm"
@@ -293,7 +293,7 @@
             {#each group.items as item, ii}
               {@const itemColor = getGroupColor(gi + ii)}
               <article
-                class="flex items-start md:items-center gap-2 md:gap-3 py-2 md:py-2.5 px-2.5 md:px-3.5 bg-card-surface border-b-[2px] border-b-border-brand-muted overflow-hidden"
+                class="flex items-start md:items-center gap-2 md:gap-3 py-2 md:py-2.5 px-2.5 md:px-3.5 bg-card-surface border-b-[3px] border-b-brutal-border overflow-hidden"
                 style="border-left: 3px solid {getColorVar(itemColor)};"
               >
                 <div class="flex-1 min-w-0 w-0 space-y-0.5">

@@ -21,8 +21,8 @@
    };
 
    const wrapperStyles: Record<StatusType, string> = {
-     error: 'px-4 py-3 border-[2px]',
-     success: 'px-4 py-3 border-[2px]',
+     error: 'px-4 py-3 border-[3px]',
+     success: 'px-4 py-3 border-[3px]',
      loading: 'flex items-center justify-center py-16',
      empty: 'flex items-center justify-center py-16 text-lg'
    };

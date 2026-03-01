@@ -6,7 +6,6 @@
     ".": "./src/lib/index.ts",
     "./utils": "./src/lib/utils.ts",
     "./ui/*": "./src/lib/components/ui/*/index.ts",
-    "./style.css": "./src/style.css",
     "./colors.css": "./src/colors.css"
   },
   "devDependencies": {
