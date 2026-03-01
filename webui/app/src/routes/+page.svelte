@@ -547,7 +547,7 @@
 <Button
   variant="outline"
   size="icon"
-  class="fixed bottom-14 right-6 z-30 bg-card-surface border-[3px] border-brutal-border text-text-brand-muted hover:border-hister-indigo hover:text-hister-indigo shadow-[4px_4px_0_var(--brutal-shadow)] hover:shadow-[2px_2px_0_var(--brutal-shadow)] hover:translate-x-[2px] hover:translate-y-[2px] transition-all rounded-none"
+  class="hidden md:inline-flex fixed bottom-14 right-6 z-30 bg-card-surface border-[3px] border-brutal-border text-text-brand-muted hover:border-hister-indigo hover:text-hister-indigo shadow-[4px_4px_0_var(--brutal-shadow)] hover:shadow-[2px_2px_0_var(--brutal-shadow)] hover:translate-x-[2px] hover:translate-y-[2px] transition-all rounded-none"
   onclick={() => { showHelp = !showHelp; }}
   title="Keyboard shortcuts (?)"
   aria-label="Show keyboard shortcuts"
@@ -574,10 +574,10 @@
     {/if}
 
     <ScrollArea class="flex-1 min-h-0">
-      <div class="w-full overflow-x-hidden px-4 md:px-12 py-2 space-y-3">
+      <div class="w-full overflow-x-hidden px-3 md:px-12 py-2 space-y-3">
       {#if hasResults}
-        <div class="flex items-center justify-between">
-          <span class="font-outfit text-base font-bold text-hister-indigo">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <span class="font-outfit text-sm md:text-base font-bold text-hister-indigo">
             {lastResults?.total || totalResults} results{query ? ` for "${query}"` : ''}
           </span>
           <div class="flex items-center gap-2">
@@ -607,7 +607,7 @@
           </p>
         {/if}
 
-        <div class="flex items-center gap-3 font-inter text-sm text-text-brand-secondary">
+        <div class="flex flex-wrap items-center gap-2 md:gap-3 font-inter text-sm text-text-brand-secondary">
           <label class="flex items-center gap-1.5">
             From:
             <Input type="date" bind:value={dateFrom} class="h-7 px-2 text-xs border-[2px] border-border-brand-muted bg-card-surface text-text-brand font-fira shadow-none focus-visible:ring-0 focus-visible:border-hister-indigo" />
@@ -789,7 +789,7 @@
       </div>
     </div>
 
-    <div bind:this={hintEl} class="flex items-center gap-2 font-inter text-xs text-text-brand-muted">
+    <div bind:this={hintEl} class="hidden md:flex items-center gap-2 font-inter text-xs text-text-brand-muted">
       <span>Pro tip: Press</span>
       <Kbd bind:ref={kbdEl} class="bg-muted-surface border-[2px] border-border-brand-muted px-2 py-0.5 font-fira text-xs font-semibold text-text-brand-secondary rounded-none">/</Kbd>
       <span>to focus search anywhere</span>
