@@ -160,19 +160,7 @@ export function getSearchUrl(searchUrl: string, query: string): string {
 }
 
 export function scrollTo(el: Element): void {
-  const search = document.querySelector(".search")?.getBoundingClientRect();
-  if (!search) return;
-  const top = search.height + search.y;
-  const rect = el.getBoundingClientRect();
-  const offset = 60;
-
-  if (rect.y <= top) {
-    window.scrollBy(0, rect.y - top - offset);
-    return;
-  }
-  if (rect.y + rect.height > window.innerHeight - offset) {
-    window.scrollBy(0, rect.y + rect.height - window.innerHeight + offset);
-  }
+  el.scrollIntoView({ block: "nearest" });
 }
 
 export interface WebSocketManagerCallbacks {
@@ -343,24 +331,6 @@ export function buildSearchQuery(
 export function parseSearchResults(data: string): SearchResults {
   const res = JSON.parse(data);
   return res;
-}
-
-export function updateSearchURL(
-  pathname: string,
-  query?: string,
-  dateFrom?: string,
-  dateTo?: string,
-): void {
-  if (!query) {
-    history.replaceState({}, "", pathname);
-    return;
-  }
-
-  const url =
-    `${pathname}?q=${encodeURIComponent(query)}` +
-    (dateFrom ? `&date_from=${encodeURIComponent(dateFrom)}` : "") +
-    (dateTo ? `&date_to=${encodeURIComponent(dateTo)}` : "");
-  history.replaceState({}, "", url);
 }
 
 export function openURL(url: string, newWindow: boolean = false): void {

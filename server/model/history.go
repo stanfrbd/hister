@@ -7,6 +7,7 @@ package model
 import (
 	"errors"
 	"strings"
+	"time"
 )
 
 type History struct {
@@ -37,9 +38,10 @@ type URLCount struct {
 }
 
 type HistoryItem struct {
-	Query string `json:"query"`
-	Title string `json:"title"`
-	URL   string `json:"url"`
+	Query     string    `json:"query"`
+	Title     string    `json:"title"`
+	URL       string    `json:"url"`
+	UpdatedAt time.Time `json:"updated_at"`
 }
 
 func GetOrCreateLink(u, title string) *Link {
@@ -117,7 +119,7 @@ func GetURLsByQuery(q string) ([]*URLCount, error) {
 
 func GetLatestHistoryItems(limit int) ([]*HistoryItem, error) {
 	var hs []*HistoryItem
-	err := DB.Select("links.url as url, links.title as title, histories.query as query").
+	err := DB.Select("links.url as url, links.title as title, histories.query as query, history_links.updated_at as updated_at").
 		Table("history_links").
 		Joins("JOIN links ON history_links.link_id = links.id").
 		Joins("JOIN histories ON history_links.history_id = histories.id").

@@ -24,6 +24,7 @@
     "@fontsource/outfit": "^5.2.8",
     "@fontsource/space-grotesk": "^5.2.10",
     "@hister/components": "^1.0.0",
+    "@tailwindcss/typography": "^0.5.19",
     "animejs": "^4.3.6",
     "lucide-svelte": "^0.575.0"
   }

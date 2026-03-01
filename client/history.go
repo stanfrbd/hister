@@ -5,7 +5,7 @@ import (
 	"strings"
 )
 
-func (c *Client) FetchHistory() ([]HistoryEntry, error) {
+func (c *Client) FetchHistory() ([]HistoryItem, error) {
 	req, err := c.newRequest("GET", "/api/history", nil)
 	if err != nil {
 		return nil, err
@@ -18,7 +18,7 @@ func (c *Client) FetchHistory() ([]HistoryEntry, error) {
 	if err := checkStatus(resp); err != nil {
 		return nil, err
 	}
-	var items []HistoryEntry
+	var items []HistoryItem
 	err = json.NewDecoder(resp.Body).Decode(&items)
 	return items, err
 }
