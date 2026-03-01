@@ -16,18 +16,18 @@
     ],
     [
       { icon: Zap, title: 'BLAZING FAST', desc: 'Instant results as you type. Full keyboard-driven workflow for maximum efficiency.', bg: 'bg-hister-indigo', textColor: 'text-white', descColor: 'text-white/80', iconBg: 'bg-white/20' },
-      { icon: Search, title: 'ADVANCED SEARCH', desc: 'Powerful query language for precise results across your entire browsing history.', bg: 'bg-[var(--text-primary)]', textColor: 'text-white', descColor: 'text-white/80', iconBg: 'bg-white/20' },
-      { icon: Settings, title: 'FLEXIBLE MANAGEMENT', desc: 'Configure blacklist and priority rules for precise control over your indexed content.', bg: 'bg-hister-teal', textColor: 'text-white', descColor: 'text-white/80', iconBg: 'bg-white/20' },
+      { icon: Search, title: 'ADVANCED SEARCH', desc: 'Powerful query language for precise results.', bg: 'bg-[var(--text-primary)]', textColor: 'text-white', descColor: 'text-white/80', iconBg: 'bg-white/20' },
+      { icon: Settings, title: 'FLEXIBLE MANAGEMENT', desc: 'Configure blacklist and priority rules to control your indexed content.', bg: 'bg-hister-teal', textColor: 'text-white', descColor: 'text-white/80', iconBg: 'bg-white/20' },
     ],
     [
-      { icon: Puzzle, title: 'BROWSER EXTENSIONS', desc: 'Available for Chrome and Firefox with seamless integration into your workflow.', bg: 'bg-hister-indigo', textColor: 'text-white', descColor: 'text-white/80', iconBg: 'bg-white/20' },
-      { icon: WifiOff, title: 'OFFLINE PREVIEW', desc: 'Readable offline previews of any result. Access your saved pages without internet.', bg: 'bg-[var(--text-primary)]', textColor: 'text-white', descColor: 'text-white/80', iconBg: 'bg-white/20' },
-      { icon: Download, title: 'BROWSER IMPORT', desc: 'Import existing Firefox or Chrome history with a single command. Get started instantly.', bg: 'bg-hister-coral', textColor: 'text-white', descColor: 'text-white/80', iconBg: 'bg-white/20' },
+      { icon: Puzzle, title: 'BROWSER EXTENSIONS', desc: 'Available for Chrome and Firefox.', bg: 'bg-hister-lime', textColor: 'text-white', descColor: 'text-white/80', iconBg: 'bg-white/20' },
+      { icon: WifiOff, title: 'OFFLINE PREVIEW', desc: 'Readable offline previews of any result. Access your saved pages without internet.', bg: 'bg-hister-coral', textColor: 'text-white', descColor: 'text-white/80', iconBg: 'bg-white/20' },
+      { icon: Download, title: 'BROWSER IMPORT', desc: 'Import existing Firefox or Chrome history with a single command.', bg: 'bg-hister-rose', textColor: 'text-white', descColor: 'text-white/80', iconBg: 'bg-white/20' },
     ],
   ];
 
   const aliasCard = {
-    icon: Terminal, title: 'SEARCH ALIASES', desc: 'Create custom keyword shortcuts to simplify complex or frequently used queries. Type less, find more.', bg: 'bg-hister-teal', textColor: 'text-white', descColor: 'text-white/80', iconBg: 'bg-[#f5f5f5]', iconColor: 'text-hister-teal',
+    icon: Terminal, title: 'SEARCH ALIASES', desc: 'Create custom keyword shortcuts to simplify complex or frequently used queries.', bg: 'bg-hister-teal', textColor: 'text-white', descColor: 'text-white/80', iconBg: 'bg-[#f5f5f5]', iconColor: 'text-hister-teal',
   };
 </script>
 
@@ -45,8 +45,8 @@
             <div class="{card.iconBg} w-12 h-12 flex items-center justify-center">
               <card.icon size={24} class="{card.iconColor ?? 'text-white'}" />
             </div>
-            <h3 class="{card.textColor} font-space text-xl font-extrabold tracking-[1px]">{card.title}</h3>
-            <p class="{card.descColor} font-inter text-[15px] leading-relaxed">{card.desc}</p>
+            <h3 class="{card.textColor} font-space text-xl md:text-3xl font-extrabold tracking-[1px]">{card.title}</h3>
+            <p class="{card.descColor} font-inter text-sm md:text-lg leading-relaxed">{card.desc}</p>
           </div>
         {/each}
       </div>
@@ -58,8 +58,8 @@
         <aliasCard.icon size={24} class="{aliasCard.iconColor}" />
       </div>
       <div class="flex flex-col gap-2">
-        <h3 class="{aliasCard.textColor} font-space text-xl font-extrabold tracking-[1px]">{aliasCard.title}</h3>
-        <p class="{aliasCard.descColor} font-inter text-[15px] leading-relaxed">{aliasCard.desc}</p>
+        <h3 class="{aliasCard.textColor} font-space text-xl md:text-3xl font-extrabold tracking-[1px]">{aliasCard.title}</h3>
+        <p class="{aliasCard.descColor} font-inter text-sm md:text-lg leading-relaxed">{aliasCard.desc}</p>
       </div>
     </div>
   </div>

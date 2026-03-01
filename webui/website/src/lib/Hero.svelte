@@ -5,13 +5,14 @@
 </script>
 
 <section class="w-full bg-brutal-bg px-6 py-12 md:py-24 flex flex-col items-center gap-8">
-  <h1 class="font-outfit text-5xl md:text-7xl lg:text-[80px] font-black text-center leading-[0.95] tracking-[-2px] text-[var(--text-primary)] max-w-[1000px]">
+  <h1 class="font-outfit text-5xl md:text-7xl lg:text-[100px] font-black text-center leading-[0.95] tracking-[-2px] text-[var(--text-primary)] max-w-[1000px]">
     YOUR OWN <br> SEARCH ENGINE
   </h1>
 
   <p class="font-inter text-base md:text-lg text-center leading-relaxed text-[var(--text-secondary)] max-w-[700px]">
-    Hister indexes every page you visit locally. Full-text search
-    across your entire browsing history. Private. Fast. Yours.
+    Hister automatically indexes every page you visit locally.<br />
+    Full-text search across your entire browsing history and beyond.<br />
+    Private. Fast. Yours.
   </p>
 
   <nav class="flex flex-wrap items-center justify-center gap-4">
