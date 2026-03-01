@@ -333,24 +333,6 @@ export function parseSearchResults(data: string): SearchResults {
   return res;
 }
 
-export function updateSearchURL(
-  pathname: string,
-  query?: string,
-  dateFrom?: string,
-  dateTo?: string,
-): void {
-  if (!query) {
-    history.replaceState({}, "", pathname);
-    return;
-  }
-
-  const url =
-    `${pathname}?q=${encodeURIComponent(query)}` +
-    (dateFrom ? `&date_from=${encodeURIComponent(dateFrom)}` : "") +
-    (dateTo ? `&date_to=${encodeURIComponent(dateTo)}` : "");
-  history.replaceState({}, "", url);
-}
-
 export function openURL(url: string, newWindow: boolean = false): void {
   if (newWindow) {
     window.open(url, "_blank");

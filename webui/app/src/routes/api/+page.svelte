@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import { apiFetch } from '$lib/api';
   import { Badge } from '@hister/components/ui/badge';
   import * as Card from '@hister/components/ui/card';
   import * as Table from '@hister/components/ui/table';
@@ -29,7 +30,7 @@
 
   onMount(async () => {
     try {
-      const res = await fetch('/api', {
+      const res = await apiFetch('/', {
         headers: { 'Accept': 'application/json' }
       });
       if (res.ok) endpoints = await res.json();

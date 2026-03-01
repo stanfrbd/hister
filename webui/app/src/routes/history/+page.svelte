@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { fetchConfig, apiFetch } from '$lib/api';
+  import type { HistoryItem } from '$lib/types';
   import { Button } from '@hister/components/ui/button';
   import { Input } from '@hister/components/ui/input';
   import { Badge } from '@hister/components/ui/badge';
@@ -8,13 +9,6 @@
   import { ScrollArea } from '@hister/components/ui/scroll-area';
   import StatusMessage from '$lib/components/StatusMessage.svelte';
   import { Search, Clock, Trash2 } from 'lucide-svelte';
-
-  interface HistoryItem {
-    query: string;
-    url: string;
-    title: string;
-    updated_at: string;
-  }
 
   let items: HistoryItem[] = $state([]);
   let loading = $state(true);

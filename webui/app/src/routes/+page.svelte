@@ -33,19 +33,13 @@
     Pin, PinOff, Download, ExternalLink, History, Shield, Link2,
     Keyboard, HelpCircle, X
   } from 'lucide-svelte';
+  import type { HistoryItem } from '$lib/types';
 
   interface Config {
     wsUrl: string;
     searchUrl: string;
     openResultsOnNewTab: boolean;
     hotkeys: Record<string, string>;
-  }
-
-  interface HistoryItem {
-    query: string;
-    url: string;
-    title: string;
-    favicon?: string;
   }
 
   let config: Config = $state({
