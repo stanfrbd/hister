@@ -54,7 +54,11 @@ TUI-specific settings are stored in a separate `~/.config/hister/tui.yaml` file 
 Execute `./hister create-config config.yml` to generate a configuration file with the default configuration values.
 
 
-## Check out our [Documentation](https://hister.org/documentation/) for more details
+## Check out our [Documentation](https://hister.org/docs/) for more details
+
+## Community
+
+Join us on IRCNet: #hister or on [Discord](https://discord.gg/vAjtDtFp)
 
 ## Bugs
 
