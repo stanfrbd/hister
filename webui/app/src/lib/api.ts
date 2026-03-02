@@ -18,7 +18,16 @@ export function setCsrf(tok: string): void {
 
 export async function fetchConfig(): Promise<AppConfig> {
   if (_config) return _config;
-  const res = await fetch('api/config');
+  const headers: Record<string, string> = {};
+  const token = localStorage.getItem('access-token');
+  if (token) {
+    headers['X-Access-Token'] = token;
+  }
+  const res = await fetch('api/config', { headers });
+  if (res.status === 403) {
+    window.location.href = '/auth';
+    throw new Error('Authentication required');
+  }
   const tok = res.headers.get('X-CSRF-Token');
   if (tok) _csrf = tok;
   _config = await res.json();
@@ -35,7 +44,15 @@ export async function apiFetch(
   if (_csrf && options.method && options.method.toUpperCase() !== 'GET') {
     headers['X-CSRF-Token'] = _csrf;
   }
+  const token = localStorage.getItem('access-token');
+  if (token) {
+    headers['X-Access-Token'] = token;
+  }
   const res = await fetch("api"+url, { ...options, headers });
+  if (res.status === 403) {
+    window.location.href = '/auth';
+    throw new Error('Authentication required');
+  }
   const newTok = res.headers.get('X-CSRF-Token');
   if (newTok) _csrf = newTok;
   return res;

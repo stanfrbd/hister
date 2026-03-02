@@ -112,15 +112,25 @@ func Listen(cfg *config.Config) {
 
 func registerEndpoints(cfg *config.Config) http.Handler {
 	mux := http.NewServeMux()
+	auth := false
+	if cfg.App.AccessToken != "" {
+		auth = true
+	}
 	for _, e := range Endpoints {
 		log.Debug().Str("Endpoint", e.Pattern()).Msg("Registering endpoint")
 		h := e.Handler
 		if e.CSRFRequired {
 			h = withCSRF(h)
 		}
+		if auth {
+			h = withAuth(h)
+		}
 		mux.HandleFunc(e.Pattern(), createHandler(cfg, h))
 	}
 	// SPA catch-all: serve index.html for any path not matched above
+	mux.HandleFunc("GET /static/", createHandler(cfg, serveStatic))
+	mux.HandleFunc("GET /favicon.ico", createHandler(cfg, serveFavicon))
+	mux.HandleFunc("GET /opensearch.xml", createHandler(cfg, serveOpensearch))
 	mux.HandleFunc("/", createHandler(cfg, serveSPA))
 	// If base_url contains a non-root path prefix (e.g. https://x.com/subfolder),
 	// accept requests both with and without that prefix.
@@ -167,6 +177,31 @@ func createHandler(cfg *config.Config, h func(*webContext)) func(w http.Response
 	}
 }
 
+func withAuth(handler endpointHandler) endpointHandler {
+	return func(c *webContext) {
+		session, err := sessionStore.Get(c.Request, storeName)
+		if err != nil {
+			serve403(c)
+			return
+		}
+		if t, ok := session.Values["access_token"].(string); ok && t == c.Config.App.AccessToken {
+			handler(c)
+			return
+		}
+		if c.Request.Header.Get("X-Access-Token") != c.Config.App.AccessToken {
+			serve403(c)
+			return
+		}
+		session.Values["access_token"] = c.Config.App.AccessToken
+		err = session.Save(c.Request, c.Response)
+		if err != nil {
+			serve500(c)
+			return
+		}
+		handler(c)
+	}
+}
+
 func withCSRF(handler endpointHandler) endpointHandler {
 	return func(c *webContext) {
 		// Allow requests coming from the command line
@@ -179,8 +214,8 @@ func withCSRF(handler endpointHandler) endpointHandler {
 			handler(c)
 			return
 		}
-		// Allow /add requests from the addons
-		if c.Request.URL.Path == "/add" {
+		// Allow add requests from the addons
+		if c.Request.URL.Path == c.Config.BasePath()+"/add" || c.Request.URL.Path == c.Config.BasePath()+"/api/add" {
 			if strings.HasPrefix(c.Request.Header.Get("Origin"), "moz-extension://") {
 				handler(c)
 				return
@@ -715,6 +750,10 @@ func serveStatic(c *webContext) {
 
 func serve200(c *webContext) {
 	c.Response.WriteHeader(http.StatusOK)
+}
+
+func serve403(c *webContext) {
+	c.Response.WriteHeader(http.StatusForbidden)
 }
 
 func serve404(c *webContext) {

@@ -122,7 +122,7 @@ const addon = {
                     to: 'manifest_ff.json'
                 },
                 {
-                    from: srcDir('../../server/static/style.css'),
+                    from: srcDir('style.css'),
                     to: 'style.css'
                 },
                 {

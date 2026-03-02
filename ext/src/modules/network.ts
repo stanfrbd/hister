@@ -15,24 +15,23 @@ async function fetchFavicon(url) {
   });
 }
 
-async function sendPageData(url, doc) {
+async function sendPageData(url, doc, tok) {
     try {
         doc['favicon'] = await fetchFavicon(doc.faviconURL);
     } catch(e) {
         doc['favicon'] = "";
     }
-    return fetch(url, {
-        method: "POST",
-        body: JSON.stringify(doc),
-        headers: {"Content-type": "application/json; charset=UTF-8"},
-    })
+    return sendResult(url, doc, tok);
 }
 
-async function sendResult(url, res) {
+async function sendResult(url, res, tok) {
     return fetch(url, {
         method: "POST",
         body: JSON.stringify(res),
-        headers: {"Content-type": "application/json; charset=UTF-8"},
+        headers: {
+            "Content-type": "application/json; charset=UTF-8",
+            "X-Access-Token": tok,
+        },
     })
 }
 

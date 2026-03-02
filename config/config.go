@@ -35,12 +35,13 @@ type Config struct {
 	SensitiveContentPatterns map[string]string `yaml:"sensitive_content_patterns" mapstructure:"sensitive_content_patterns"`
 	Rules                    *Rules            `yaml:"-" mapstructure:"-"`
 	secretKey                []byte
-	parsedBaseURL             *url.URL
+	parsedBaseURL            *url.URL
 }
 
 type App struct {
 	Directory           string `yaml:"directory" mapstructure:"directory"`
 	SearchURL           string `yaml:"search_url" mapstructure:"search_url"`
+	AccessToken         string `yaml:"access_token" mapstructure:"access_token"`
 	LogLevel            string `yaml:"log_level" mapstructure:"log_level"`
 	DebugSQL            bool   `yaml:"debug_sql" mapstructure:"debug_sql"`
 	OpenResultsOnNewTab bool   `yaml:"open_results_on_new_tab" mapstructure:"open_results_on_new_tab"`
@@ -341,8 +342,13 @@ func (c *Config) init() error {
 		c.Server.BaseURL = fmt.Sprintf("http://%s", c.Server.Address)
 	}
 	c.Server.BaseURL = strings.TrimSuffix(c.Server.BaseURL, "/")
-	if pu, err := url.Parse(c.Server.BaseURL); err == nil {
-		c.parsedBaseURL = pu
+	pu, err := url.Parse(c.Server.BaseURL)
+	if err != nil {
+		return errors.New("failed to parse base URL: " + err.Error())
+	}
+	c.parsedBaseURL = pu
+	if c.App.AccessToken != "" && c.parsedBaseURL.Scheme != "https" {
+		log.Warn().Msg("Using authentication token without https. Token is sent plain-text in network requests.")
 	}
 	if strings.HasPrefix(c.App.Directory, "~/") {
 		u, _ := user.Current()
@@ -531,6 +537,14 @@ func (c *Config) BaseURL(u string) string {
 		u = "/" + u
 	}
 	return c.Server.BaseURL + u
+}
+
+func (c *Config) BasePath() string {
+	bu, err := c.baseURLParsed()
+	if err != nil {
+		return ""
+	}
+	return bu.Path
 }
 
 func (c *Config) IsSameHost(h string) bool {
