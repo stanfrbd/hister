@@ -164,15 +164,15 @@
   <title>Hister - History</title>
 </svelte:head>
 
-<header class="flex items-center justify-between px-3 md:px-6 py-3 bg-card-surface border-b-[3px] border-brutal-border shrink-0 gap-2">
-  <h1 class="flex items-center gap-2 shrink-0"><span class="w-1 h-6 bg-hister-indigo"></span><span class="font-space text-base md:text-lg tracking-[1px] font-extrabold text-text-brand uppercase">Search History</span></h1>
-  <nav class="flex items-center gap-2 md:gap-3 min-w-0">
-    <div class="flex items-center gap-2 h-8 px-3 border-[3px] border-brutal-border bg-page-bg min-w-0">
+<header class="flex items-center justify-between px-3 md:px-6 py-3 bg-card-surface border-b-[3px] border-brutal-border shrink-0 gap-2 overflow-hidden">
+  <h1 class="flex items-center gap-2 shrink-0 min-w-0"><span class="w-1 h-6 bg-hister-indigo shrink-0"></span><span class="font-space text-sm md:text-lg tracking-[1px] font-extrabold text-text-brand truncate uppercase">Search History</span></h1>
+  <nav class="flex items-center gap-2 md:gap-3 min-w-0 shrink-0">
+    <div class="flex items-center gap-2 h-8 px-2 md:px-3 border-[3px] border-brutal-border bg-page-bg min-w-0">
       <Search class="size-3.5 text-text-brand-muted shrink-0" />
       <Input
         bind:value={filter}
         placeholder="Filter..."
-        class="w-24 md:w-40 h-full bg-transparent font-inter text-xs font-medium text-text-brand placeholder:text-text-brand-muted border-0 shadow-none focus-visible:ring-0 p-0"
+        class="w-20 md:w-40 h-full bg-transparent font-inter text-xs font-medium text-text-brand placeholder:text-text-brand-muted border-0 shadow-none focus-visible:ring-0 p-0"
       />
     </div>
     {#if items.length > 0}
@@ -196,7 +196,7 @@
 {:else if filteredItems.length === 0}
   <StatusMessage message={filter ? 'No matching entries' : 'No history yet'} type="empty" />
 {:else}
-  <div class="flex flex-col md:flex-row flex-1 min-h-0">
+  <div class="flex flex-col md:flex-row flex-1 min-h-0 overflow-hidden">
     <!-- Timeline sidebar: hidden on mobile, shown on md+ -->
     <ScrollArea class="hidden md:block w-[280px] shrink-0 border-r-[3px] border-brutal-border pt-5 pr-3">
       <div class="space-y-1">
@@ -281,8 +281,8 @@
       {/each}
     </div>
 
-    <ScrollArea class="flex-1 min-w-0">
-      <div class="w-full overflow-x-hidden px-3 md:px-6 py-3 md:py-5 space-y-4 md:space-y-6">
+    <ScrollArea orientation="vertical" class="flex-1 min-w-0 min-h-0 max-w-full overflow-x-hidden">
+      <div class="w-full overflow-hidden px-3 md:px-6 py-3 md:py-5 space-y-4 md:space-y-6">
       {#each groups as group, gi}
         {@const color = getGroupColor(gi)}
         <div id="group-{encodeURIComponent(group.key)}" class="space-y-2">
