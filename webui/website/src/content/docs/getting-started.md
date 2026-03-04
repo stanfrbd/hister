@@ -2,8 +2,6 @@
 date: '2026-02-13T10:59:19+01:00'
 draft: false
 title: 'Getting Started'
-order: 1
-category: 'Getting Started'
 ---
 
 ## Installation

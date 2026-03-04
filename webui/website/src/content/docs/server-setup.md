@@ -2,8 +2,6 @@
 date: '2026-02-21T16:18:00+01:00'
 draft: false
 title: 'Server Setup and Configuration'
-order: 4
-category: 'Deployment'
 ---
 
 This guide explains how to run and configure the Hister server in different environments.
