@@ -33,22 +33,15 @@ func InputKeys(m *model.Model, msg tea.KeyMsg) tea.Cmd {
 			if m.SelectedIdx < 0 {
 				m.SelectedIdx = 0
 			}
-			render.RefreshViewport(m)
-			m.ScrollToSelected()
+			render.RefreshAndScroll(m)
 		}
 		return m.FlashHint(config.ActionToggleFocus)
 	case config.ActionOpenResult:
 		if m.SelectedIdx >= 0 {
 			if m.SelectedIdx == m.Limit {
-				m.Limit += 10
-				render.RefreshViewport(m)
-				m.ScrollToSelected()
-				cmds := []tea.Cmd{m.FlashHint(config.ActionOpenResult), doSearch(m)}
-				if m.WsReady {
-					m.IsSearching = true
-					cmds = append(cmds, m.Spinner.Tick)
-				}
-				return tea.Batch(cmds...)
+				m.Limit += model.ResultsPageSize
+				render.RefreshAndScroll(m)
+				return startSearch(m, m.FlashHint(config.ActionOpenResult))
 			} else if u := m.GetSelectedURL(); u != "" {
 				browser.OpenURL(u)
 				return tea.Batch(m.FlashHint(config.ActionOpenResult), m.PostHistoryCmd(u))
@@ -61,14 +54,9 @@ func InputKeys(m *model.Model, msg tea.KeyMsg) tea.Cmd {
 	oldVal := m.TextInput.Value()
 	m.TextInput, cmd = m.TextInput.Update(msg)
 	if m.TextInput.Value() != oldVal {
-		m.Limit = 10
+		m.Limit = model.ResultsPageSize
 		m.SelectedIdx = -1
-		cmds := []tea.Cmd{cmd, doSearch(m)}
-		if m.WsReady {
-			m.IsSearching = true
-			cmds = append(cmds, m.Spinner.Tick)
-		}
-		return tea.Batch(cmds...)
+		return startSearch(m, cmd)
 	}
 	return cmd
 }
@@ -88,15 +76,9 @@ func ResultsKeys(m *model.Model, msg tea.KeyMsg) tea.Cmd {
 		return tea.Batch(textinput.Blink, m.FlashHint(config.ActionToggleFocus))
 	case config.ActionOpenResult:
 		if m.SelectedIdx == m.Limit {
-			m.Limit += 10
-			render.RefreshViewport(m)
-			m.ScrollToSelected()
-			cmds := []tea.Cmd{m.FlashHint(config.ActionOpenResult), doSearch(m)}
-			if m.WsReady {
-				m.IsSearching = true
-				cmds = append(cmds, m.Spinner.Tick)
-			}
-			return tea.Batch(cmds...)
+			m.Limit += model.ResultsPageSize
+			render.RefreshAndScroll(m)
+			return startSearch(m, m.FlashHint(config.ActionOpenResult))
 		} else if u := m.GetSelectedURL(); u != "" {
 			browser.OpenURL(u)
 			return tea.Batch(m.FlashHint(config.ActionOpenResult), m.PostHistoryCmd(u))

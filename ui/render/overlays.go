@@ -211,3 +211,8 @@ func RefreshViewport(m *model.Model) {
 		m.Viewport.SetContent(Results(m))
 	}
 }
+
+func RefreshAndScroll(m *model.Model) {
+	RefreshViewport(m)
+	m.ScrollToSelected()
+}

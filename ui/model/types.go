@@ -93,6 +93,18 @@ var ActionToTab = map[config.Action]int{
 
 var TabNames = []string{"Search", "History", "Rules", "Add"}
 
+// Layout constants shared across packages (mouse handlers, render, model init).
+const (
+	ResultsPageSize   = 10 // results per page
+	ScrollbarWidth    = 2  // columns reserved for scrollbar
+	TabBarLeftPad     = 1  // leading space before first tab
+	TabLabelPad       = 2  // brackets/spaces around tab name
+	TabGap            = 1  // space between tab labels
+	AddSubmitFieldIdx = 3  // focus index for submit button
+	InputLeadingPad   = 2  // spaces before prompt ("  ")
+	InputTrailingPad  = 1  // space after prompt (" ")
+)
+
 const (
 	RowTabBar  = 0 // tab bar header
 	RowInput   = 2 // search input line

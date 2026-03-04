@@ -40,24 +40,17 @@ func DispatchCommonAction(m *model.Model, action config.Action) (tea.Cmd, bool) 
 		} else {
 			m.SortMode = ""
 		}
-		cmds := []tea.Cmd{m.FlashHint(config.ActionToggleSort), doSearch(m)}
-		if m.WsReady {
-			m.IsSearching = true
-			cmds = append(cmds, m.Spinner.Tick)
-		}
-		return tea.Batch(cmds...), true
+		return startSearch(m, m.FlashHint(config.ActionToggleSort)), true
 	case config.ActionScrollUp:
 		if m.SelectedIdx > 0 {
 			m.SelectedIdx--
-			render.RefreshViewport(m)
-			m.ScrollToSelected()
+			render.RefreshAndScroll(m)
 		}
 		return m.FlashHint(config.ActionScrollUp), true
 	case config.ActionScrollDown:
 		if m.SelectedIdx < m.GetTotalResults()-1 {
 			m.SelectedIdx++
-			render.RefreshViewport(m)
-			m.ScrollToSelected()
+			render.RefreshAndScroll(m)
 		}
 		return m.FlashHint(config.ActionScrollDown), true
 	case config.ActionDeleteResult:
@@ -97,8 +90,7 @@ func ExecuteAction(m *model.Model, action config.Action) tea.Cmd {
 				if m.SelectedIdx < 0 {
 					m.SelectedIdx = 0
 				}
-				render.RefreshViewport(m)
-				m.ScrollToSelected()
+				render.RefreshAndScroll(m)
 			}
 		} else {
 			m.State = model.StateInput
@@ -140,6 +132,15 @@ func SwitchTab(m *model.Model, action config.Action) tea.Cmd {
 	return cmd
 }
 
+func startSearch(m *model.Model, extra ...tea.Cmd) tea.Cmd {
+	cmds := append([]tea.Cmd{doSearch(m)}, extra...)
+	if m.WsReady {
+		m.IsSearching = true
+		cmds = append(cmds, m.Spinner.Tick)
+	}
+	return tea.Batch(cmds...)
+}
+
 func doSearch(m *model.Model) tea.Cmd {
 	q := m.TextInput.Value()
 	if strings.TrimSpace(q) == "" {
@@ -156,13 +157,27 @@ func doSearch(m *model.Model) tea.Cmd {
 }
 
 func CloseOverlay(m *model.Model) tea.Cmd {
-	m.OverlayOffX, m.OverlayOffY = 0, 0
-	m.IsDragging = false
-	m.State = m.PrevState
+	m.DismissOverlay()
 	if m.State == model.StateInput {
 		return m.TextInput.Focus()
 	}
 	return nil
+}
+
+func submitAdd(m *model.Model) tea.Cmd {
+	u := strings.TrimSpace(m.AddInputs[0].Value())
+	if u == "" {
+		m.AddStatus = "URL is required"
+		return nil
+	}
+	if !strings.Contains(u, "://") {
+		u = "https://" + u
+		m.AddInputs[0].SetValue(u)
+	}
+	title := strings.TrimSpace(m.AddInputs[1].Value())
+	text := strings.TrimSpace(m.AddInputs[2].Value())
+	m.AddStatus = "Adding..."
+	return m.AddPageCmd(u, title, text)
 }
 
 func CloseThemePickerWithRevert(m *model.Model) tea.Cmd {

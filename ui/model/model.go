@@ -181,7 +181,7 @@ func InitialModel(cfg *config.Config) *Model {
 		Client:             client.New(cfg.BaseURL("")),
 		SelectedIdx:        -1,
 		DialogReturnTab:    -1,
-		Limit:              10,
+		Limit:              ResultsPageSize,
 		WsChan:             make(chan tea.Msg, 10),
 		WsDone:             make(chan struct{}),
 		Styles:             st,
@@ -338,8 +338,15 @@ func (m *Model) OpenThemePicker() {
 	m.OpenOverlay(StateThemePicker)
 }
 
+func (m *Model) DismissOverlay() {
+	m.IsDragging = false
+	m.OverlayOffX, m.OverlayOffY = 0, 0
+	m.State = m.PrevState
+}
+
 // DismissDialog returns to the correct state after closing a dialog.
 func (m *Model) DismissDialog() {
+	m.DismissOverlay()
 	if m.DialogReturnTab >= 0 {
 		m.ActiveTab = m.DialogReturnTab
 		m.State = StateResults
@@ -347,6 +354,20 @@ func (m *Model) DismissDialog() {
 		return
 	}
 	m.State = StateResults
+}
+
+func (m *Model) OpenContextMenu(idx, x, y, offX, offY int) {
+	m.MenuX, m.MenuY = x, y
+	m.MenuIdx = idx
+	m.MenuSelIdx = 0
+	m.OpenOverlay(StateContextMenu)
+	m.OverlayOffX, m.OverlayOffY = offX, offY
+}
+
+func (m *Model) StartDrag(x, y int) {
+	m.IsDragging = true
+	m.DragStartX, m.DragStartY = x, y
+	m.DragOffX0, m.DragOffY0 = m.OverlayOffX, m.OverlayOffY
 }
 
 func (m *Model) SetTerminalBg(hex string) {

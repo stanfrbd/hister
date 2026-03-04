@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/asciimoo/hister/config"
+	"github.com/asciimoo/hister/ui/handle/mouse"
 	"github.com/asciimoo/hister/ui/model"
 	"github.com/asciimoo/hister/ui/network"
 	"github.com/asciimoo/hister/ui/render"
@@ -17,6 +18,17 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
+var mouseHandler = mouse.New(mouse.Deps{
+	ExecuteAction:              ExecuteAction,
+	SwitchTab:                  SwitchTab,
+	StartSearch:                startSearch,
+	CloseOverlay:               CloseOverlay,
+	SubmitAdd:                  submitAdd,
+	CloseThemePickerWithRevert: CloseThemePickerWithRevert,
+	PreviewTheme:               previewTheme,
+	ExecuteContextMenuAction:   executeContextMenuAction,
+})
+
 func Update(m *model.Model, msg tea.Msg) tea.Cmd {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
@@ -24,7 +36,7 @@ func Update(m *model.Model, msg tea.Msg) tea.Cmd {
 		m.Width, m.Height = msg.Width, msg.Height
 
 		vpH := max(0, m.Height-model.FixedLayoutRows)
-		vpW := max(1, m.Width-2)
+		vpW := max(1, m.Width-model.ScrollbarWidth)
 		m.TextInput.Width = max(1, m.Width-6)
 
 		if !m.Ready {
@@ -34,8 +46,7 @@ func Update(m *model.Model, msg tea.Msg) tea.Cmd {
 			return tea.ClearScreen
 		}
 		m.Viewport.Width, m.Viewport.Height = vpW, vpH
-		render.RefreshViewport(m)
-		m.ScrollToSelected()
+		render.RefreshAndScroll(m)
 		if changed {
 			return tea.ClearScreen
 		}
@@ -75,7 +86,7 @@ func Update(m *model.Model, msg tea.Msg) tea.Cmd {
 		}
 
 	case tea.MouseMsg:
-		return Mouse(m, msg)
+		return mouseHandler.Handle(m, msg)
 
 	case spinner.TickMsg:
 		if m.IsSearching || m.HistoryLoading || m.RulesLoading {
@@ -124,8 +135,7 @@ func Update(m *model.Model, msg tea.Msg) tea.Cmd {
 		if m.SelectedIdx < 0 && m.GetTotalResults() > 0 {
 			m.SelectedIdx = 0
 		}
-		render.RefreshViewport(m)
-		m.ScrollToSelected()
+		render.RefreshAndScroll(m)
 		return network.ListenToWebSocket(m.WsChan, m.WsDone)
 
 	case model.WsConnectedMsg:

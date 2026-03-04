@@ -331,19 +331,7 @@ func AddKeys(m *model.Model, msg tea.KeyMsg) tea.Cmd {
 		return m.FlashHint(config.ActionToggleFocus)
 	case config.ActionOpenResult:
 		if m.AddFocusIdx == 3 || m.AddFocusIdx == 2 {
-			u := strings.TrimSpace(m.AddInputs[0].Value())
-			if u == "" {
-				m.AddStatus = "URL is required"
-				return nil
-			}
-			if !strings.Contains(u, "://") {
-				u = "https://" + u
-				m.AddInputs[0].SetValue(u)
-			}
-			title := strings.TrimSpace(m.AddInputs[1].Value())
-			text := strings.TrimSpace(m.AddInputs[2].Value())
-			m.AddStatus = "Adding..."
-			return m.AddPageCmd(u, title, text)
+			return submitAdd(m)
 		}
 		if m.AddFocusIdx < len(m.AddInputs) {
 			m.AddInputs[m.AddFocusIdx].Blur()
