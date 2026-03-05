@@ -40,7 +40,6 @@ compose.yml
 # Browser Extension & Nix
 ext/
 node_modules/
-package-lock.json
 flake.nix
 flake.lock
 nix/
