@@ -1,14 +1,34 @@
+import { docsStructure } from '$lib/docs-structure.js';
+
 const modules = import.meta.glob('../../content/docs/*.md', { eager: true });
 
-export async function load() {
-  const docs = Object.entries(modules).map(([path, mod]) => {
-    const slug = path.split('/').pop()?.replace('.md', '') ?? path;
-    const { metadata } = mod as { metadata?: { title?: string } };
-    return {
-      slug,
-      title: metadata?.title ?? slug.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
-    };
-  });
+export interface DocEntry {
+  slug: string;
+  title: string;
+}
 
-  return { docs };
+export interface DocCategory {
+  name: string;
+  docs: DocEntry[];
+}
+
+export async function load() {
+  const docs: DocEntry[] = docsStructure.flatMap(({ slugs }) =>
+    slugs.map((slug) => {
+      const mod = modules[`../../content/docs/${slug}.md`] as { metadata?: Record<string, string> };
+      return {
+        slug,
+        title: mod?.metadata?.title ?? slug.replace(/-/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase()),
+      };
+    })
+  );
+
+  const categories: DocCategory[] = docsStructure
+    .map(({ name, slugs }) => ({
+      name,
+      docs: docs.filter((d) => slugs.includes(d.slug)),
+    }))
+    .filter((c) => c.docs.length > 0);
+
+  return { docs, categories };
 }

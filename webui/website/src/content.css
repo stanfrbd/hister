@@ -4,6 +4,10 @@
   font-family: 'Inter', sans-serif;
 }
 
+.content.doc-content {
+  max-width: none;
+}
+
 .content h1,
 .content h2,
 .content h3,
