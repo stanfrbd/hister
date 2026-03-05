@@ -3,25 +3,28 @@
   import { Input } from "@hister/components/ui/input";
   import { Label } from "@hister/components/ui/label";
   import { Separator } from "@hister/components/ui/separator";
+  import { Switch } from "@hister/components/ui/switch";
 
   const defaultURL = "http://127.0.0.1:4433/";
 
   let url = $state(defaultURL);
   let token = $state("");
+  let indexingEnabled = $state(true);
   let message = $state("");
 
-  chrome.storage.local.get(["histerURL", "histerToken"], (data) => {
+  chrome.storage.local.get(["histerURL", "histerToken", "indexingEnabled"], (data) => {
     if (!data["histerURL"]) {
       chrome.storage.local.set({ histerURL: defaultURL });
     }
     url = data["histerURL"] || defaultURL;
     token = data["histerToken"] || "";
+    indexingEnabled = data["indexingEnabled"] !== false;
   });
 
   function save(e: Event) {
     e.preventDefault();
     chrome.storage.local
-      .set({ histerURL: url, histerToken: token })
+      .set({ histerURL: url, histerToken: token, indexingEnabled: indexingEnabled })
       .then(() => {
         message = "Settings saved";
       });
@@ -59,6 +62,11 @@
     <div class="space-y-1">
       <Label for="token">Access token (optional)</Label>
       <Input id="token" type="text" bind:value={token} placeholder="Token..." />
+    </div>
+
+    <div class="flex items-center justify-between">
+      <Label for="indexing">Enable automatic indexing</Label>
+      <Switch id="indexing" bind:checked={indexingEnabled} />
     </div>
 
     <Button type="submit" class="w-full">Save</Button>

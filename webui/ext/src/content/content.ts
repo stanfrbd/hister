@@ -24,7 +24,7 @@ if(isFirefox) {
 }
 window.addEventListener("navigatesuccess", update)
 
-function extract(sendResponse) {
+function extract(sendResponse, actionType) {
     registerResultExtractor(window, r => chrome.runtime.sendMessage({resultData:  r}));
     try {
         d = extractPageData();
@@ -32,8 +32,12 @@ function extract(sendResponse) {
         console.log("failed to extract page data:", e);
         return;
     }
+    let msg = {pageData: d};
+    if(actionType) {
+        msg['action'] = actionType;
+    }
     chrome.runtime.sendMessage(
-        {pageData:  d},
+        msg,
         resp => {
             if(typeof sendResponse === 'function') {
                 sendResponse(resp);
@@ -79,7 +83,7 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
         return;
     }
     if(request.action == "reindex") {
-        extract(sendResponse);
+        extract(sendResponse, "reindex");
 		return true;
     }
     console.log("message received", request)

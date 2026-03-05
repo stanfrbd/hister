@@ -17,3 +17,4 @@ export { Textarea } from './components/ui/textarea';
 export { PageHeader } from './components/page-header';
 export { BrowserFrame } from './components/browser-frame';
 export { FeatureCard } from './components/feature-card';
+export { Switch } from './components/ui/switch';
