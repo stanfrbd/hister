@@ -66,9 +66,7 @@ build() {
 build_addon() {
     check_npm
     echo "[!] Warning: The default manifest.json is for chrome browsers, overwrite it with manifest_ff.json for firefox"
-    cd webui/ext
-    npm run build
-    cd ../..
+    npm run build -w @hister/ext
 }
 
 build_website() {
