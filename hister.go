@@ -493,6 +493,8 @@ func indexURL(u string) error {
 }
 
 func importHistory(cmd *cobra.Command, args []string) {
+	// TODO: get skip rules from server
+
 	browser := args[0]
 	if browser != "firefox" && browser != "chrome" {
 		exit(1, "Invalid browser type it should be 'firefox' or 'chrome'")
@@ -507,17 +509,17 @@ func importHistory(cmd *cobra.Command, args []string) {
 		exit(1, "Failed to open database: "+err.Error())
 	}
 	defer db.Close()
-	q := fmt.Sprintf("SELECT DISTINCT url FROM %s WHERE 1=1", table)
+	q := fmt.Sprintf("SELECT DISTINCT count(url) FROM %s WHERE url LIKE 'http://%%' OR url LIKE 'https://%%'", table)
 	if i, err := cmd.Flags().GetInt("min-visit"); err == nil && i > 1 {
 		q += fmt.Sprintf(" AND visit_count >= %d", i)
 	}
 
-	cq := strings.Replace(q, "DISTINCT url", "DISTINCT count(url)", 1)
-	row := db.QueryRow(cq)
+	// TODO: apply skip rules to get a more precise count?
+	row := db.QueryRow(q)
 	var count int
 	if err := row.Scan(&count); err != nil {
-		log.Debug().Str("query", cq).Msg("count query")
-		exit(1, "Failed to execute database query: "+err.Error())
+		log.Debug().Str("query", q).Msg("count query")
+		log.Fatal().Err(err).Msg("Failed to execute counting query")
 	}
 
 	if count < 1 {
@@ -528,13 +530,14 @@ func importHistory(cmd *cobra.Command, args []string) {
 		return
 	}
 
+	q = strings.Replace(q, "count(url)", "url", 1)
 	q += " ORDER BY visit_count DESC"
 
 	fmt.Println(cliBoldStyle.Render("IMPORTING"))
 
-	rows, err := db.Query(q)
+	rows, err := db.Query(q, "url")
 	if err != nil {
-		exit(1, "Failed to execute database query: "+err.Error())
+		log.Fatal().Err(err).Msg("Failed to execute database query")
 	}
 	defer rows.Close()
 	i := 1
@@ -543,10 +546,7 @@ func importHistory(cmd *cobra.Command, args []string) {
 		var u string
 		err = rows.Scan(&u)
 		if err != nil {
-			exit(1, "Failed to retreive URL: "+err.Error())
-		}
-		if !strings.HasPrefix(u, "http://") && !strings.HasPrefix(u, "https://") {
-			continue
+			log.Fatal().Err(err).Msg("Failed to execute database query")
 		}
 		if cfg.Rules.IsSkip(u) {
 			log.Debug().Str("URL", u).Msg("skip importing URL by rule")
