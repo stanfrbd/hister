@@ -114,7 +114,7 @@
           <Button
             variant="ghost"
             href="#{entry.id}"
-            class="justify-start font-inter text-[13px] py-1 no-underline transition-colors border-l-2 h-auto rounded-none
+            class="justify-start font-inter text-[13px] py-1 no-underline transition-colors border-l-2 h-auto rounded-none whitespace-normal text-left
               {entry.level === 3 ? 'pl-5' : 'pl-3'}
               {activeId === entry.id
               ? 'border-hister-indigo text-(--text-primary) font-medium'
