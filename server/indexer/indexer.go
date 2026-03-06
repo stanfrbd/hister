@@ -146,6 +146,11 @@ func Reindex(basePath string, rules *config.Rules, skipSensitiveChecks bool) err
 		return err
 	}
 	tmpBasePath := filepath.Join(basePath, "reindex")
+	if _, err := os.Stat(tmpBasePath); err == nil {
+		if err := os.RemoveAll(tmpBasePath); err != nil {
+			return err
+		}
+	}
 	tmpIdx, err := initializeIndexer(tmpBasePath)
 	if err != nil {
 		return err
