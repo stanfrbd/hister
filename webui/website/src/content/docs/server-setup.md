@@ -1,183 +1,179 @@
 ---
 date: '2026-02-21T16:18:00+01:00'
 draft: false
-title: 'Server Setup and Configuration'
+title: 'Server Setup'
 ---
 
-## Running on a Different Host
+First, decide where you want your Hister server to run, relative to your client(s).
+There are three options:
 
-If you want to access Hister from other devices on your network or run it on a server, you need to configure two settings.
+- **On the same computer**: simplest, but limited to that machine (single device).
+- **On the same local network**: still mostly simple, but limited to that network (roughly, only for devices connected to the same router&mdash;it won't work over 4G/5G/...!).
+- **Over the Internet**: requires the most setup, but accessible from everywhere.
 
-### Generate Configuration File
+The first one is covered by the basic setup (just run `hister listen`), but the other two require some more consideration, and modifying the Hister server's config.
 
-You can generate a default configuration file using the `create-config` command:
+## Local Network
 
-```bash
-./hister create-config config.yml
-```
+The [`server` configuration] needs to be edited to tell the Hister server to allow talking with other machines on the local network (usually, this means "connected to your router").
 
-If no filename is provided, it will print the default configuration to `stdout`.
+1. Edit the `address` and `base_url` fields:
 
-> **Note**: You can also configure Hister entirely using **Environment Variables**, which is often easier for server setups. See the [Configuration via Environment Variables](#configuration-via-environment-variables) section below for details.
+   ```yaml
+   server:
+     address: '[::]:4433'
+     base_url: http://localhost:4433
+   ```
 
-### Bind to All Network Interfaces
+   (*Optionally*, if you want to listen on a specific network interface, append `%<interface_name>` after the closing bracket `]` in `address`.)
+2. To apply those changes, close the Hister server if it was already running, and restart it.
+   Check that you can access the Hister Web interface at <http://localhost:4433>.
+   If not, replace `[::]` in `address` with `0.0.0.0`, and retry this step.
 
-Edit your configuration file (e.g., `~/.config/hister/config.yml`):
+We now need to replace `localhost` with a location other machines can use to find this computer.
+You can either use a **static IP**, if you know how to assign one to a computer; otherwise, you can use the computer's **hostname**, which may be a little more finicky and less reliable.
 
-```yaml
-server:
-  address: '0.0.0.0:4433' # or the target interface's address
-  base_url: 'http://192.168.1.100:4433' # Use your actual server IP or hostname
-```
+<details><summary>Static IP</summary>
 
-Replace `192.168.1.100` with your server's actual IP address or domain name.
-
-The `base_url` must match exactly how you access Hister in your browser. If you access it via `https://hister.example.com`, set that as your `base_url`.
-
-**Important**: After changing the configuration, restart the Hister server.
-
-## Running Behind a Reverse Proxy
-
-When running Hister behind a reverse proxy (like Nginx, Caddy, or Traefik), you need to ensure WebSocket connections work properly for the `/search` endpoint.
-
-### Required Configuration
-
-The reverse proxy must pass the `Upgrade` HTTP header to enable WebSocket connections:
-
-#### Nginx Example
-
-```nginx
-location / {
-        location /search {
-                proxy_pass http://127.0.0.1:4433/search;
-                proxy_http_version 1.1;
-                proxy_set_header Upgrade $http_upgrade;
-                proxy_set_header Connection "upgrade";
-                proxy_read_timeout 86400;
-
-        }
-        # add_header Access-Control-Allow-Origin *;
-        proxy_set_header        Host    $http_host;
-        proxy_set_header        X-Real-IP $remote_addr;
-        proxy_set_header        X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header        X-Forwarded-Proto $scheme;
-        proxy_set_header        X-Scheme $scheme;
-        proxy_pass http://127.0.0.1:4433/;
-
-        client_max_body_size 100m; # A *lot* of data is sometimes sent when indexing pages.
-}
-```
-
-#### Caddy Example
-
-```caddy
-hister.example.com {
-    # only bind to your VPN or local network interface:
-    bind fd00:1122:3344:5566::1
-    reverse_proxy localhost:4433
-}
-```
-
-Caddy handles WebSocket upgrades automatically.
-
-#### Traefik Example
-
-Traefik also handles WebSocket upgrades automatically with no special configuration needed.
-
-### Hister Configuration
-
-Update your `~/.config/hister/config.yml` to use the public URL:
+Assign the Hister server's computer its permanent IP, then register it in `base_url`.
+For example, for the IP `192.168.42.69`:
 
 ```yaml
-server:
-  address: '127.0.0.1:4433' # Keep localhost since proxy handles external access
-  base_url: 'https://hister.example.com' # Your public URL
+  base_url: http://192.168.42.69:4433
 ```
 
-## Configuration via Environment Variables
+It is also possible to access the Web interface using the computer's hostname even if it has a static IP, which may be easier to remember; but placing the IP in the config should remain more reliable.
 
-Hister can be fully configured using environment variables. This is the **recommended approach for containerized environments** (Docker, Kubernetes, etc.) as it avoids the need to manage configuration files inside the container or mounted volumes.
+</details>
+<details><summary>Hostname</summary>
 
-### Environment Variable Format
+This can be more finicky, because sharing hostnames between computers without some setup is sometimes broken on home networks because routers break them.
+This can be less reliable, because if your computer's IP address may occasionally change while the server is up, which can cause short disruptions.
 
-All configuration options can be set using environment variables with the prefix `HISTER__`. Nested keys are separated by double underscores (`__`).
+1. Obtain the computer's hostname:
 
-| Variable                   | Description                                                           |
-| -------------------------- | --------------------------------------------------------------------- |
-| `HISTER__SERVER__ADDRESS`  | The address and port the server binds to (default: `127.0.0.1:4433`)  |
-| `HISTER__SERVER__BASE_URL` | The external URL used to access Hister (e.g., `https://hister.com`)   |
-| `HISTER__SERVER__DATABASE` | The filename of the SQLite database (default: `db.sqlite3`)           |
-| `HISTER__APP__DIRECTORY`   | The directory where Hister stores its data (shorthand: `DATA_DIR`)    |
-| `HISTER__APP__LOG_LEVEL`   | Logging verbosity: `debug`, `info`, `warn`, `error` (default: `info`) |
-| `HISTER_PORT`              | Shorthand to override only the port in `server.address`               |
+   - **Linux**, **macOS**: you can run the `hostname` command in the terminal, or find the hostname somewhere in system settings.
+   - **Windows**: TODO (note also that you may need to [enable network discovery](https://superuser.com/questions/1560557/can-access-shared-network-files-by-ip-but-not-by-host-name#answer-1560563) for your PC to announce its hostname).
+2. Replace `localhost` in `base_url:` with the hostname *suffixed by `.local`.
+   For example, let's use my laptop's hostname `zonai-goat`, though it can be something like `DESKTOP-D9JCP0Q`.
 
-## Docker Setup
+   ```yaml
+   server:
+     address: '[::]:4433'
+     base_url: http://zonai-goat.local:4433
+   ```
+3. Restart the Hister server, then try accessing the Hister Web interface (preferably from another device!) at the address specified in the `base_url` field.
+   If your browser reports being unable to connect to the server, check your firewall settings.
 
-Hister provides official Docker images for both AMD64 and ARM64 architectures. Using environment variables is the preferred way to configure Hister in Docker.
+   If the issue persists, try removing the `.local` part of the `base_url`, restart the server, and try again (don't forget to remove the `.local` part from your browser's address bar also!).
 
-> **Note on Permissions**: The `latest` image runs as a **non-root user** (UID/GID 1000) by default for better security. Ensure the mounted volume (e.g., `./data`) has the correct permissions. If you need to run as root, use the `ghcr.io/asciimoo/hister:latest-root` image.
+</details>
 
-### Generating Configuration via Docker
+## Over the Internet
 
-If you prefer using a configuration file instead of environment variables, you can generate a default one using Docker:
+*Since this implies administration a system exposed to the Internet and **owning a domain name**, this section assumes more technical knowledge than the previous one.*
 
-```bash
-docker run --rm ghcr.io/asciimoo/hister:latest create-config > config.yml
-```
+Careful! **<mark>Security</mark>** considerations start rearing their head.
+Hister transmits your entire browsing history, *with page contents*, to and from the server.
+This is not something you want circulating unencrypted on the public Internet; therefore, we **strongly** recommend connecting to the server using HTTPS.
 
-### Basic Docker Compose
+Hister's server does not support HTTPS itself, which is solved by using a [reverse proxy].
+In particular, some, like [Caddy] or [Traefik], have built-in support for automatically requesting the required [TLS certificate].
 
-For a simple local setup:
+1. Fill in the [`server` configuration] with your domain name and a loopback listen address:
+   ```yaml
+   server:
+     address: 127.0.0.1:4433
+     base_url: https://hister.example.com
+   ```
+2. (Re)start the Hister server to apply the change.
+3. Set up your favourite reverse proxy. Here are some examples:
 
-```yaml
-services:
-  hister:
-    image: ghcr.io/asciimoo/hister:latest
-    container_name: hister
-    user: '1000:1000'
-    restart: unless-stopped
-    volumes:
-      - ./data:/hister/data
-    ports:
-      - 4433:4433
-```
+   <details><summary>Caddy</summary>
 
-### Docker Compose with External Access
+   In your `Caddyfile`:
 
-To make Hister accessible from other devices, use the `environment` section in your `compose.yml`:
+   ```
+   hister.example.com {
+       reverse_proxy localhost:4433
+   }
+   ```
 
-```yaml
-services:
-  hister:
-    image: ghcr.io/asciimoo/hister:latest
-    container_name: hister
-    user: '1000:1000'
-    restart: unless-stopped
-    environment:
-      - HISTER__SERVER__ADDRESS=0.0.0.0:4433
-      - HISTER__SERVER__BASE_URL=http://192.168.1.100:4433 # Use your actual IP/hostname
-    volumes:
-      - ./data:/hister/data
-    ports:
-      - 4433:4433
-```
+   Alternatively, if running Caddy solely for Hister:
 
-### Docker Compose Behind Reverse Proxy
+   ```bash
+   caddy reverse-proxy --from hister.example.com --to localhost:4433
+   ```
 
-When running behind a reverse proxy, set the `base_url` to your public domain:
+   </details>
+   <details><summary>Nginx</summary>
 
-```yaml
-services:
-  hister:
-    image: ghcr.io/asciimoo/hister:latest
-    container_name: hister
-    user: '1000:1000'
-    restart: unless-stopped
-    environment:
-      - HISTER__SERVER__ADDRESS=0.0.0.0:4433
-      - HISTER__SERVER__BASE_URL=https://hister.example.com # Your public URL
-    volumes:
-      - ./data:/hister/data
-    ports:
-      - 4433:4433
-```
+   ```nginx
+   # Make sure you have a good TLS configuration!
+   # https://ssl-config.mozilla.org/#server=nginx
+   
+   # You will also need to point Nginx at your TLS certificate,
+   # https://nginx.org/en/docs/http/configuring_https_servers.html
+   # and likely also set up auto-renewal, assuming you're using Let's Encrypt.
+   # https://letsencrypt.org/docs/client-options/
+   
+   server {
+   	server_name hister.example.com;
+   	listen 443 ssl; listen [::]:443 ssl;
+   	http2 on;
+   	listen 443 quic; listen [::]:443 quic;
+   	http3 on;
+   	add_header Alt-Svc 'h3=":443"; ma=86400; persist=1'; # Advertise HTTP/3 support.
+
+   	gzip off; # Prevents some security vulns on encrypted traffic.
+   	# Redirect HTTP reqs made on the HTTPS port into proper HTTPS reqs.
+   	error_page 497 =301 https://$host:$server_port$request_uri;
+
+   	location / {
+   		proxy_pass http://127.0.0.1:4433$request_uri;
+
+   		# More secure and performant than the default.
+   		proxy_http_version 1.1;
+   		
+   		# Uncomment this if you know what you're doing.
+   		# add_header Access-Control-Allow-Origin *;
+   		proxy_set_header        Host              $http_host;
+   		proxy_set_header        X-Real-IP         $remote_addr;
+   		proxy_set_header        X-Forwarded-For   $proxy_add_x_forwarded_for;
+   		proxy_set_header        X-Forwarded-Proto $scheme;
+   		proxy_set_header        X-Scheme          $scheme;
+   		
+   		# Configuration necessary for the /search endpoint.
+   		proxy_set_header   Upgrade    $http_upgrade;
+   		proxy_set_header   Connection $hister_connection; # This variable is defined in a `map` below.
+   		proxy_read_timeout 86400;
+   		
+   		# Some pages are larger than the default of 1 MiB, causing `413` errors.
+   		# 100 MiB should be reasonably large, adjust to taste.
+   		client_max_body_size 100m;
+   	}
+   }
+   # Optionally: add an extra `server` block to redirect HTTP to HTTPS.
+   server {
+   	server_name hister.example.com;
+   	listen 80;
+   	listen [::]:80;
+   	# Redirect HTTP to HTTPS.
+   	return 301 https://$host$request_uri;
+   }
+   # This is used to upgrade WebSocket connections on the `/search` endpoint.
+   map $uri $hister_connection {
+   	/search upgrade;
+   	default close;
+   }
+   ```
+
+   **Note**: if search doesn't work, there likely is a problem with WebSocket connections; troubleshooting info can be gathered from Nginx's `access.log` (tells you whether requests reached Nginx) and `error.log` (tells if you if any errors occurred *within* Nginx).
+
+   </details>
+
+[`server` configuration]: configuration#server-section
+[reverse proxy]: http://en.wikipedia.org/wiki/Reverse_proxy
+[Caddy]: https://caddyserver.com/
+[Traefik]: https://doc.traefik.io/traefik/getting-started/
+[TLS certificate]: https://en.wikipedia.org/wiki/TLS_certificate

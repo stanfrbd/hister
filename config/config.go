@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"html/template"
 	"net"
+	"net/netip"
 	"net/url"
 	"os"
 	"os/user"
@@ -396,20 +397,25 @@ func (c *Config) UpdateListenAddress(a string) error {
 }
 
 func (c *Config) UpdateBaseURL(u string) error {
-	c.Server.BaseURL = u
-	if c.Server.BaseURL == "" {
+	// If the base URL is unspecified, it defaults to the listen address.
+	if u == "" {
 		c.usesDefaultBaseURL = true
-		if strings.HasPrefix(c.Server.Address, "0.0.0.0") {
-			return errors.New("server: base_url must be specified when listening on 0.0.0.0")
+		addr_port, err := netip.ParseAddrPort(c.Server.Address)
+		if err != nil {
+			return fmt.Errorf("failed to parse listen address: %w", err)
+		}
+		if addr_port.Addr().IsUnspecified() {
+			return fmt.Errorf("server: base_url must be specified when listening on %v", addr_port.Addr())
 		}
 		c.Server.BaseURL = fmt.Sprintf("http://%s", c.Server.Address)
 	} else {
 		c.usesDefaultBaseURL = false
+		c.Server.BaseURL = strings.TrimSuffix(u, "/")
 	}
-	c.Server.BaseURL = strings.TrimSuffix(c.Server.BaseURL, "/")
+
 	pu, err := url.Parse(c.Server.BaseURL)
 	if err != nil {
-		return errors.New("failed to parse base URL: " + err.Error())
+		return fmt.Errorf("failed to parse base URL: %w", err)
 	}
 	c.parsedBaseURL = pu
 	return nil
