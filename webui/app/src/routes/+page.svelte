@@ -796,7 +796,7 @@
                     class="font-outfit text-md text-hister-teal block w-full overflow-hidden font-semibold text-ellipsis whitespace-nowrap hover:underline md:text-xl"
                     onclick={(e) => {
                       e.preventDefault();
-                      openResult(r.url, r.title || '*title*');
+                      openResult(r.url, r.title || '*title*', e.ctrlKey);
                     }}
                   >
                     {@html r.title || '*title*'}
@@ -908,7 +908,7 @@
                     style="color: var(--{color});"
                     onclick={(e) => {
                       e.preventDefault();
-                      openResult(r.url, r.title || '*title*');
+                      openResult(r.url, r.title || '*title*', e.ctrlKey);
                     }}
                   >
                     {@html r.title || '*title*'}
