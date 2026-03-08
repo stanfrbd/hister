@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"strings"
 	"time"
 
@@ -170,7 +171,7 @@ func Reindex(basePath string, rules *config.Rules, skipSensitiveChecks bool) err
 	}
 	q := query.NewMatchAllQuery()
 	total := idx.Total()
-	batchSize := 20
+	batchSize := 50
 	page := 0
 	for {
 		req := bleve.NewSearchRequest(q)
@@ -216,6 +217,7 @@ func Reindex(basePath string, rules *config.Rules, skipSensitiveChecks bool) err
 			os.RemoveAll(tmpBasePath)
 			return err
 		}
+		runtime.GC()
 		page += 1
 		log.Info().Msg(fmt.Sprintf("Reindexed [%d/%d]", page*batchSize, total))
 	}
