@@ -30,7 +30,6 @@ import (
 
 var (
 	appSubFS         iofs.FS
-	spaFileServer    http.Handler
 	staticFileServer http.Handler
 	sessionStore     *sessions.CookieStore
 	errCSRFMismatch  = errors.New("CSRF token mismatch")
@@ -93,7 +92,6 @@ func init() {
 	}
 	staticTextFiles = make(map[string][]byte)
 	appSubFS = sub
-	spaFileServer = http.FileServerFS(appSubFS)
 	staticFileServer = http.StripPrefix("/static/", http.FileServerFS(appSubFS))
 }
 
@@ -173,10 +171,8 @@ func Listen(cfg *config.Config) {
 
 func registerEndpoints(cfg *config.Config) http.Handler {
 	mux := http.NewServeMux()
-	auth := false
-	if cfg.App.AccessToken != "" {
-		auth = true
-	}
+	auth := cfg.App.AccessToken != ""
+
 	for _, e := range Endpoints {
 		log.Debug().Str("Endpoint", e.Pattern()).Msg("Registering endpoint")
 		h := e.Handler
@@ -340,7 +336,7 @@ func serveIndex(c *webContext) {
 	}
 	c.Response.Header().Set("Content-Type", "text/html; charset=utf-8")
 	c.Response.Header().Set("Content-Security-Policy", fmt.Sprintf("script-src 'strict-dynamic' 'nonce-%s'", c.nonce))
-	c.Response.Write(bytes.ReplaceAll(content, []byte("<script>"), []byte(fmt.Sprintf(`<script nonce="%s">`, c.nonce))))
+	_, _ = c.Response.Write(bytes.ReplaceAll(content, []byte("<script>"), []byte(fmt.Sprintf(`<script nonce="%s">`, c.nonce))))
 }
 
 // serveSPA serves the SPA index.html for any route not matching a static file.
@@ -359,7 +355,7 @@ func serveSPA(c *webContext) {
 			c.Response.Header().Set("Content-Type", "application/octet-stream")
 		}
 		c.Response.WriteHeader(http.StatusOK)
-		c.Response.Write(content)
+		_, _ = c.Response.Write(content)
 		return
 	}
 	// If the exact file exists in the embedded app FS, serve it directly
@@ -379,7 +375,7 @@ func serveSPA(c *webContext) {
 			c.Response.Header().Set("Content-Type", "application/octet-stream")
 		}
 		c.Response.WriteHeader(http.StatusOK)
-		c.Response.Write(content)
+		_, _ = c.Response.Write(content)
 		return
 	}
 
@@ -473,7 +469,7 @@ func serveSearch(c *webContext) {
 			return
 		}
 		c.Response.Header().Add("Content-Type", "application/json")
-		c.Response.Write(jr)
+		_, _ = c.Response.Write(jr)
 		return
 	}
 	conn, err := ws.Upgrade(c.Response, c.Request, nil)
@@ -481,7 +477,7 @@ func serveSearch(c *webContext) {
 		log.Error().Err(err).Msg("failed to upgrade websocket request")
 		return
 	}
-	defer conn.Close()
+	defer func() { _ = conn.Close() }()
 	for {
 		_, q, err := conn.ReadMessage()
 		if err != nil {
@@ -699,7 +695,9 @@ func serveReadable(c *webContext) {
 		return
 	}
 	var htmlContent strings.Builder
-	r.RenderHTML(&htmlContent)
+	if err := r.RenderHTML(&htmlContent); err != nil {
+		log.Warn().Err(err).Msg("failed to render readable HTML")
+	}
 	title := doc.Title
 	if r.Title() != "" {
 		title = r.Title()
@@ -766,7 +764,7 @@ func serveOpensearch(c *webContext) {
   <Url type="text/html" template="%s/?q={searchTerms}"/>
 </OpenSearchDescription>`, baseURL)
 	c.Response.Header().Set("Content-Type", "application/xml")
-	c.Response.Write([]byte(xml))
+	_, _ = c.Response.Write([]byte(xml))
 }
 
 func serveAddAlias(c *webContext) {
@@ -827,7 +825,7 @@ func serveFavicon(c *webContext) {
 		return
 	}
 	c.Response.Header().Add("Content-Type", "image/vnd.microsoft.icon")
-	c.Response.Write(i)
+	_, _ = c.Response.Write(i)
 }
 
 func serveStatic(c *webContext) {
@@ -842,17 +840,15 @@ func serve403(c *webContext) {
 	c.Response.WriteHeader(http.StatusForbidden)
 }
 
-func serve404(c *webContext) {
-	c.Response.WriteHeader(http.StatusNotFound)
-}
-
 func serve500(c *webContext) {
 	http.Error(c.Response, "Internal Server Error", http.StatusInternalServerError)
 }
 
 func (c *webContext) JSON(o any) {
 	c.Response.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(c.Response).Encode(o)
+	if err := json.NewEncoder(c.Response).Encode(o); err != nil {
+		log.Error().Err(err).Msg("failed to encode JSON response")
+	}
 }
 
 func (c *webContext) Redirect(u string) {

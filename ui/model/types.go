@@ -7,10 +7,11 @@ package model
 import (
 	"time"
 
+	"github.com/gorilla/websocket"
+
 	"github.com/asciimoo/hister/client"
 	"github.com/asciimoo/hister/config"
 	"github.com/asciimoo/hister/server/indexer"
-	"github.com/gorilla/websocket"
 
 	tea "github.com/charmbracelet/bubbletea"
 )
@@ -42,17 +43,19 @@ type SearchQuery struct {
 }
 
 // Message types for bubbletea
-type ResultsMsg struct{ Results *indexer.Results }
-type ErrMsg struct{ Err error }
-type WsConnectedMsg struct{ Conn *websocket.Conn }
-type WsDisconnectedMsg struct{ Err error }
-type ReconnectMsg struct{}
-type HintClearMsg struct{}
-type SettingsErrClearMsg struct{}
-type HistoryFetchedMsg struct{ Items []HistoryItem }
-type RulesFetchedMsg struct{ Data RulesResponse }
-type AddResultMsg struct{ Err error }
-type RulesSavedMsg struct{ Err error }
+type (
+	ResultsMsg          struct{ Results *indexer.Results }
+	ErrMsg              struct{ Err error }
+	WsConnectedMsg      struct{ Conn *websocket.Conn }
+	WsDisconnectedMsg   struct{ Err error }
+	ReconnectMsg        struct{}
+	HintClearMsg        struct{}
+	SettingsErrClearMsg struct{}
+	HistoryFetchedMsg   struct{ Items []HistoryItem }
+	RulesFetchedMsg     struct{ Data RulesResponse }
+	AddResultMsg        struct{ Err error }
+	RulesSavedMsg       struct{ Err error }
+)
 
 type HistoryItem = client.HistoryItem
 

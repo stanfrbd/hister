@@ -17,7 +17,7 @@ func (c *Client) Search(query string) (*indexer.Results, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if err := checkStatus(resp); err != nil {
 		return nil, err
 	}

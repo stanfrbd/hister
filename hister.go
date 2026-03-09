@@ -154,9 +154,11 @@ var searchCmd = &cobra.Command{
 			}
 		case "csv":
 			w := csv.NewWriter(os.Stdout)
-			w.Write([]string{"title", "url", "domain", "score", "added", "language", "text"})
+			if err := w.Write([]string{"title", "url", "domain", "score", "added", "language", "text"}); err != nil {
+				exit(1, "Failed to write CSV header: "+err.Error())
+			}
 			for _, r := range res.Documents {
-				w.Write([]string{
+				if err := w.Write([]string{
 					r.Title,
 					r.URL,
 					r.Domain,
@@ -164,7 +166,9 @@ var searchCmd = &cobra.Command{
 					strconv.FormatInt(r.Added, 10),
 					r.Language,
 					r.Text,
-				})
+				}); err != nil {
+					exit(1, "Failed to write CSV row: "+err.Error())
+				}
 			}
 			w.Flush()
 			if err := w.Error(); err != nil {
@@ -342,12 +346,6 @@ func initLog() {
 	}
 }
 
-func setStrArg(cmd *cobra.Command, arg string, dest *string) {
-	if v, err := cmd.Flags().GetString(arg); err == nil && (cmd.Flags().Changed(arg) || *dest == "") {
-		*dest = v
-	}
-}
-
 func initDB() {
 	err := model.Init(cfg)
 	if err != nil {
@@ -382,7 +380,7 @@ func yesNoPrompt(label string, def bool) bool {
 	var s string
 
 	for {
-		os.Stderr.Write(prompt)
+		_, _ = os.Stderr.Write(prompt)
 		s, _ = r.ReadString('\n')
 		s = strings.TrimSpace(s)
 		if s == "" {
@@ -438,7 +436,7 @@ func yesNoPrompt(label string, def bool) bool {
 //	var s string
 //
 //	for {
-//		os.Stderr.Write(prompt)
+//		_, _ = os.Stderr.Write(prompt)
 //		s, _ = r.ReadString('\n')
 //		s = strings.TrimSpace(s)
 //		if s == "" {
@@ -469,7 +467,7 @@ func indexURL(u string) error {
 	if err != nil {
 		return errors.New(`failed to download file: ` + err.Error())
 	}
-	defer r.Body.Close()
+	defer func() { _ = r.Body.Close() }()
 	if r.StatusCode != http.StatusOK {
 		return fmt.Errorf("invalid response code: %d", r.StatusCode)
 	}
@@ -522,7 +520,7 @@ func importHistory(cmd *cobra.Command, args []string) {
 	if err != nil {
 		log.Fatal().Err(err).Msg("Failed to open database")
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	// Fetch skip rules from the server.
 	c := newClient()
@@ -533,7 +531,8 @@ func importHistory(cmd *cobra.Command, args []string) {
 		// TODO: let the user know that their local rules are being overwritten?
 		cfg.Rules.Skip.ReStrs = resp.Skip
 		if err := cfg.Rules.Skip.Compile(); err != nil {
-			log.Fatal().Err(err).Msg("Unable to compile skip rules from server")
+			log.Error().Err(err).Msg("Unable to compile skip rules from server")
+			return
 		}
 	}
 
@@ -546,7 +545,8 @@ func importHistory(cmd *cobra.Command, args []string) {
 	var count int
 	if err := row.Scan(&count); err != nil {
 		log.Debug().Str("query", q).Msg("count query")
-		log.Fatal().Err(err).Msg("Failed to execute counting query")
+		log.Error().Err(err).Msg("Failed to execute counting query")
+		return
 	}
 
 	if count < 1 {
@@ -564,9 +564,10 @@ func importHistory(cmd *cobra.Command, args []string) {
 
 	rows, err := db.Query(q, "url")
 	if err != nil {
-		log.Fatal().Err(err).Msg("Failed to execute database query")
+		log.Error().Err(err).Msg("Failed to execute database query")
+		return
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	i := 0
 	skipped := 0
 	for rows.Next() {
@@ -574,7 +575,8 @@ func importHistory(cmd *cobra.Command, args []string) {
 		var u string
 		err = rows.Scan(&u)
 		if err != nil {
-			log.Fatal().Err(err).Msg("Failed to execute database query")
+			log.Error().Err(err).Msg("Failed to scan database row")
+			return
 		}
 		if cfg.Rules.IsSkip(u) {
 			log.Debug().Str("URL", u).Msg("skip importing URL by rule")
@@ -617,5 +619,7 @@ func newClient() *client.Client {
 }
 
 func main() {
-	rootCmd.Execute()
+	if err := rootCmd.Execute(); err != nil {
+		os.Exit(1)
+	}
 }

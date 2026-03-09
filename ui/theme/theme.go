@@ -11,8 +11,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/asciimoo/hister/config"
 	"gopkg.in/yaml.v3"
+
+	"github.com/asciimoo/hister/config"
 )
 
 //go:embed themes/*.yaml

@@ -24,7 +24,7 @@ func (c *Client) AddDocumentJSON(doc *indexer.Document) error {
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	return checkStatus(resp)
 }
 
@@ -39,7 +39,7 @@ func (c *Client) AddPage(u, title, text string) error {
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	return checkStatus(resp)
 }
 
@@ -52,7 +52,7 @@ func (c *Client) DocumentExists(u string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	resp.Body.Close()
+	_ = resp.Body.Close()
 	return resp.StatusCode == http.StatusOK, nil
 }
 
@@ -67,6 +67,6 @@ func (c *Client) DeleteDocument(u string) error {
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	return checkStatus(resp)
 }

@@ -59,7 +59,7 @@ func HistoryKeys(m *model.Model, msg tea.KeyMsg) tea.Cmd {
 		return m.FlashHint(config.ActionScrollDown)
 	case config.ActionOpenResult:
 		if m.HistoryIdx >= 0 && m.HistoryIdx < len(m.HistoryItems) {
-			browser.OpenURL(m.HistoryItems[m.HistoryIdx].URL)
+			_ = browser.OpenURL(m.HistoryItems[m.HistoryIdx].URL)
 		}
 		return m.FlashHint(config.ActionOpenResult)
 	case config.ActionDeleteResult:

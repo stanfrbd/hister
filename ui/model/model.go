@@ -444,7 +444,7 @@ func (m *Model) FindResultAtY(contentY int) int {
 func (m *Model) PostHistoryCmd(u string) tea.Cmd {
 	q, title := m.TextInput.Value(), m.GetSelectedTitle()
 	return func() tea.Msg {
-		m.Client.PostHistory(q, u, title)
+		_ = m.Client.PostHistory(q, u, title)
 		return nil
 	}
 }
@@ -494,14 +494,14 @@ func (m *Model) DeleteAliasCmd(alias string) tea.Cmd {
 
 func (m *Model) DeleteURLCmd(u string) tea.Cmd {
 	return func() tea.Msg {
-		m.Client.DeleteDocument(u)
+		_ = m.Client.DeleteDocument(u)
 		return nil
 	}
 }
 
 func (m *Model) DeleteHistoryEntryCmd(query, url string) tea.Cmd {
 	return func() tea.Msg {
-		m.Client.DeleteHistoryEntry(query, url)
+		_ = m.Client.DeleteHistoryEntry(query, url)
 		items, _ := m.Client.FetchHistory()
 		return HistoryFetchedMsg{Items: items}
 	}

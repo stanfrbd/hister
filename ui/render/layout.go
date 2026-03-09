@@ -195,11 +195,15 @@ func hintEntries(m *model.Model) []hintEntry {
 			act config.Action
 			lbl string
 		}{
-			{config.ActionScrollUp, "up"}, {config.ActionScrollDown, "down"},
-			{config.ActionOpenResult, "open"}, {config.ActionDeleteResult, "delete"},
-			{config.ActionToggleSort, "sort"}, {config.ActionToggleTheme, "theme"},
+			{config.ActionScrollUp, "up"},
+			{config.ActionScrollDown, "down"},
+			{config.ActionOpenResult, "open"},
+			{config.ActionDeleteResult, "delete"},
+			{config.ActionToggleSort, "sort"},
+			{config.ActionToggleTheme, "theme"},
 			{config.ActionToggleSettings, "settings"},
-			{config.ActionToggleHelp, "help"}, {config.ActionQuit, "quit"},
+			{config.ActionToggleHelp, "help"},
+			{config.ActionQuit, "quit"},
 		} {
 			if isNoColor && a.act == config.ActionToggleTheme {
 				continue
@@ -429,19 +433,28 @@ func GenerateHelpText(m *model.Model) string {
 		items []struct{ act, lbl string }
 	}{
 		{"General:", []struct{ act, lbl string }{
-			{"quit", "Quit"}, {"toggle_help", "Toggle help"}, {"toggle_theme", "Toggle theme picker"},
-			{"toggle_settings", "Toggle settings"}, {"toggle_sort", "Toggle sort mode"},
-			{"tab_search", "Search tab"}, {"tab_history", "History tab"},
-			{"tab_rules", "Rules tab"}, {"tab_add", "Add tab"},
+			{"quit", "Quit"},
+			{"toggle_help", "Toggle help"},
+			{"toggle_theme", "Toggle theme picker"},
+			{"toggle_settings", "Toggle settings"},
+			{"toggle_sort", "Toggle sort mode"},
+			{"tab_search", "Search tab"},
+			{"tab_history", "History tab"},
+			{"tab_rules", "Rules tab"},
+			{"tab_add", "Add tab"},
 		}},
 		{"Search input:", []struct{ act, lbl string }{
-			{"toggle_focus", "Focus results list"}, {"scroll_up", "Previous result"},
-			{"scroll_down", "Next result"}, {"open_result", "Open result"},
+			{"toggle_focus", "Focus results list"},
+			{"scroll_up", "Previous result"},
+			{"scroll_down", "Next result"},
+			{"open_result", "Open result"},
 			{"delete_result", "Delete result"},
 		}},
 		{"Results list:", []struct{ act, lbl string }{
-			{"toggle_focus", "Back to input"}, {"scroll_up", "Navigate up"},
-			{"scroll_down", "Navigate down"}, {"open_result", "Open selected"},
+			{"toggle_focus", "Back to input"},
+			{"scroll_up", "Navigate up"},
+			{"scroll_down", "Navigate down"},
+			{"open_result", "Open selected"},
 			{"delete_result", "Delete selected"},
 		}},
 	}

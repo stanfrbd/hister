@@ -12,10 +12,11 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/asciimoo/hister/config"
-	"github.com/asciimoo/hister/ui/theme"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/mattn/go-runewidth"
+
+	"github.com/asciimoo/hister/config"
+	"github.com/asciimoo/hister/ui/theme"
 )
 
 // pads s with spaces on the right to reach exactly width display columns

@@ -7,6 +7,7 @@ import (
 	_ "github.com/blevesearch/bleve/v2/analysis/lang/ar"
 	_ "github.com/blevesearch/bleve/v2/analysis/lang/bg"
 	_ "github.com/blevesearch/bleve/v2/analysis/lang/ca"
+
 	// _ "github.com/blevesearch/bleve/v2/analysis/lang/cs" // This is only a stopword list, bleve does not have a Czech language analyzer
 	_ "github.com/blevesearch/bleve/v2/analysis/lang/da"
 	_ "github.com/blevesearch/bleve/v2/analysis/lang/de"

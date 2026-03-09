@@ -48,7 +48,7 @@ var Endpoints []*Endpoint
 func init() {
 	// TODO add Args
 	Endpoints = []*Endpoint{
-		&Endpoint{
+		{
 			Name:         "Config",
 			Path:         "/api/config",
 			Method:       GET,
@@ -56,7 +56,7 @@ func init() {
 			Handler:      serveConfig,
 			Description:  "Serve config",
 		},
-		&Endpoint{
+		{
 			Name:         "Search",
 			Path:         "/search",
 			Method:       GET,
@@ -65,7 +65,7 @@ func init() {
 			Description:  "Search websocket endpoint",
 		},
 		// tmp added for backward compatibility
-		&Endpoint{
+		{
 			Name:         "Add",
 			Path:         "/api/add",
 			Method:       GET,
@@ -73,7 +73,7 @@ func init() {
 			Handler:      serveAdd,
 			Description:  "Add document form",
 		},
-		&Endpoint{
+		{
 			Name:         "Add post",
 			Path:         "/api/add",
 			Method:       POST,
@@ -82,7 +82,7 @@ func init() {
 			Description:  "Save added document",
 		},
 		// alias for /api/add - backward compatibility - use /api/add in the future
-		&Endpoint{
+		{
 			Name:         "Add post",
 			Path:         "/add",
 			Method:       POST,
@@ -90,7 +90,7 @@ func init() {
 			Handler:      serveAdd,
 			Description:  "Save added document",
 		},
-		&Endpoint{
+		{
 			Name:         "Get document",
 			Path:         "/api/document",
 			Method:       GET,
@@ -98,7 +98,7 @@ func init() {
 			Handler:      serveGet,
 			Description:  "Get document by URL",
 			Args: []*EndpointArg{
-				&EndpointArg{
+				{
 					Name:        "url",
 					Type:        "string",
 					Required:    true,
@@ -106,7 +106,7 @@ func init() {
 				},
 			},
 		},
-		&Endpoint{
+		{
 			Name:         "Rules",
 			Path:         "/api/rules",
 			Method:       GET,
@@ -114,7 +114,7 @@ func init() {
 			Handler:      serveRules,
 			Description:  "Rules page",
 		},
-		&Endpoint{
+		{
 			Name:         "Save rules",
 			Path:         "/api/rules",
 			Method:       POST,
@@ -122,7 +122,7 @@ func init() {
 			Handler:      serveRules,
 			Description:  "Save rules",
 		},
-		&Endpoint{
+		{
 			Name:         "History",
 			Path:         "/api/history",
 			Method:       GET,
@@ -130,7 +130,7 @@ func init() {
 			Handler:      serveHistory,
 			Description:  "History page",
 		},
-		&Endpoint{
+		{
 			Name:         "Add history item",
 			Path:         "/api/history",
 			Method:       POST,
@@ -138,7 +138,7 @@ func init() {
 			Handler:      serveHistory,
 			Description:  "Add new history item",
 		},
-		&Endpoint{
+		{
 			Name:         "Delete",
 			Path:         "/api/delete",
 			Method:       POST,
@@ -146,7 +146,7 @@ func init() {
 			Handler:      serveDeleteDocument,
 			Description:  "Delete document endpoint",
 		},
-		&Endpoint{
+		{
 			Name:         "Delete alias",
 			Path:         "/api/delete_alias",
 			Method:       POST,
@@ -154,7 +154,7 @@ func init() {
 			Handler:      serveDeleteAlias,
 			Description:  "Delete alias",
 		},
-		&Endpoint{
+		{
 			Name:         "Add alias",
 			Path:         "/api/add_alias",
 			Method:       POST,
@@ -162,7 +162,7 @@ func init() {
 			Handler:      serveAddAlias,
 			Description:  "Add alias",
 		},
-		&Endpoint{
+		{
 			Name:         "Readable",
 			Path:         "/api/readable",
 			Method:       GET,
@@ -170,7 +170,7 @@ func init() {
 			Handler:      serveReadable,
 			Description:  "Readabilty view",
 		},
-		&Endpoint{
+		{
 			Name:         "Stats",
 			Path:         "/api/stats",
 			Method:       GET,
@@ -178,7 +178,7 @@ func init() {
 			Handler:      serveStats,
 			Description:  "Search engine statistics",
 		},
-		&Endpoint{
+		{
 			Name:         "API",
 			Path:         "/api",
 			Method:       GET,

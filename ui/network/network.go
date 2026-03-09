@@ -31,12 +31,15 @@ func ConnectWebSocket(wsURL, origin string, wsChan chan tea.Msg, wsDone chan str
 	return func() tea.Msg {
 		header := http.Header{}
 		header.Set("Origin", origin)
-		conn, _, err := websocket.DefaultDialer.Dial(wsURL, header)
+		conn, resp, err := websocket.DefaultDialer.Dial(wsURL, header)
+		if resp != nil && resp.Body != nil {
+			defer func() { _ = resp.Body.Close() }()
+		}
 		if err != nil {
 			return model.WsDisconnectedMsg{Err: err}
 		}
 		go func() {
-			defer conn.Close()
+			defer func() { _ = conn.Close() }()
 			for {
 				select {
 				case <-wsDone:
@@ -79,7 +82,7 @@ func Search(conn *websocket.Conn, wsMu *sync.Mutex, wsReady bool, q model.Search
 			return nil
 		}
 		wsMu.Lock()
-		conn.WriteMessage(websocket.TextMessage, b)
+		_ = conn.WriteMessage(websocket.TextMessage, b)
 		wsMu.Unlock()
 		return nil
 	}

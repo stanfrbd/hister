@@ -15,7 +15,7 @@ func (c *Client) FetchRules() (*RulesResponse, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if err := checkStatus(resp); err != nil {
 		return nil, err
 	}
@@ -35,7 +35,7 @@ func (c *Client) SaveRules(skip, priority string) error {
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	return checkStatus(resp)
 }
 
@@ -50,7 +50,7 @@ func (c *Client) AddAlias(keyword, value string) error {
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	return checkStatus(resp)
 }
 
@@ -65,6 +65,6 @@ func (c *Client) DeleteAlias(alias string) error {
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	return checkStatus(resp)
 }

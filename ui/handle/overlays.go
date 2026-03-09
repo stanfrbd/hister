@@ -16,6 +16,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/pkg/browser"
+	"github.com/rs/zerolog/log"
 )
 
 func DialogKeys(m *model.Model, msg tea.KeyMsg) tea.Cmd {
@@ -211,7 +212,9 @@ func settingsEditKey(m *model.Model, msg tea.KeyMsg) tea.Cmd {
 	delete(m.Cfg.Hotkeys.TUI, oldKey)
 	m.Cfg.Hotkeys.TUI[newKey] = string(action)
 	m.SettingsEditMode = false
-	m.Cfg.SaveTUIConfig()
+	if err := m.Cfg.SaveTUIConfig(); err != nil {
+		log.Warn().Err(err).Msg("failed to save TUI config")
+	}
 	return nil
 }
 
@@ -238,7 +241,7 @@ func executeContextMenuAction(m *model.Model) tea.Cmd {
 	switch m.MenuSelIdx {
 	case model.MenuOpen:
 		if u := m.GetSelectedURL(); u != "" {
-			browser.OpenURL(u)
+			_ = browser.OpenURL(u)
 			return m.PostHistoryCmd(u)
 		}
 	case model.MenuDelete:

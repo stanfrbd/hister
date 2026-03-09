@@ -41,8 +41,10 @@ type indexer struct {
 	dir      string
 }
 
-const defaultIndexerName = "index.db"
-const langIndexerName = "index_%s.db"
+const (
+	defaultIndexerName = "index.db"
+	langIndexerName    = "index_%s.db"
+)
 
 type Query struct {
 	Text      string `json:"text"`
@@ -101,8 +103,12 @@ func Init(cfg *config.Config) error {
 	if err != nil {
 		return err
 	}
-	registry.RegisterHighlighter("ansi", invertedAnsiHighlighter)
-	registry.RegisterHighlighter("tui", tuiHighlighter)
+	if err := registry.RegisterHighlighter("ansi", invertedAnsiHighlighter); err != nil {
+		return err
+	}
+	if err := registry.RegisterHighlighter("tui", tuiHighlighter); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -200,7 +206,7 @@ func Reindex(basePath string, rules *config.Rules, skipSensitiveChecks bool) err
 					continue
 				} else {
 					tmpIdx.Close()
-					os.RemoveAll(tmpBasePath)
+					_ = os.RemoveAll(tmpBasePath)
 					return err
 				}
 			}
@@ -211,13 +217,13 @@ func Reindex(basePath string, rules *config.Rules, skipSensitiveChecks bool) err
 			d.Added = origDate
 			if err := b.Add(d); err != nil {
 				tmpIdx.Close()
-				os.RemoveAll(tmpBasePath)
+				_ = os.RemoveAll(tmpBasePath)
 				return err
 			}
 		}
 		if err := b.Save(); err != nil {
 			tmpIdx.Close()
-			os.RemoveAll(tmpBasePath)
+			_ = os.RemoveAll(tmpBasePath)
 			return err
 		}
 		runtime.GC()
@@ -226,14 +232,14 @@ func Reindex(basePath string, rules *config.Rules, skipSensitiveChecks bool) err
 	}
 	idx.Close()
 	tmpIdx.Close()
-	for n, _ := range idx.indexers {
+	for n := range idx.indexers {
 		idxPath := filepath.Join(basePath, n)
 		if err := os.RemoveAll(idxPath); err != nil {
 			return err
 		}
 	}
 	var renameError error
-	for n, _ := range tmpIdx.indexers {
+	for n := range tmpIdx.indexers {
 		idxPath := filepath.Join(basePath, n)
 		tmpIdxPath := filepath.Join(tmpBasePath, n)
 		if err := os.Rename(tmpIdxPath, idxPath); err != nil {
@@ -286,7 +292,7 @@ func (i *indexer) getOrCreate(lang string) bleve.Index {
 			log.Warn().Err(err).Str("Name", idxName).Msg("Failed to create language indexer")
 			return i.indexers[defaultIndexerName]
 		}
-		idx, _ = i.indexers[idxName]
+		idx = i.indexers[idxName]
 	}
 	return idx
 }
@@ -304,7 +310,7 @@ func (i *indexer) addIndexer(name, lang string) error {
 
 func (i *indexer) Close() {
 	for _, idx := range i.indexers {
-		idx.Close()
+		_ = idx.Close()
 	}
 }
 
