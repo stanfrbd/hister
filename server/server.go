@@ -103,6 +103,16 @@ func parseStaticFiles(baseDir string) error {
 		return err
 	}
 	return recParseStaticFiles(files, "app", baseDir)
+	//cspHashes := make([]string, 0, len(staticTextFiles))
+	//for n, c := range staticTextFiles {
+	//	if strings.HasSuffix(n, ".js") {
+	//		h := sha256.New()
+	//		h.Write(c)
+	//		s := h.Sum(nil)
+	//		cspHashes = append(cspHashes, fmt.Sprintf("'sha256-%s'", base64.StdEncoding.EncodeToString(s)))
+	//	}
+	//}
+	//cspValues = fmt.Sprintf("script-src 'strict-dynamic' %s", strings.Join(cspHashes, " "))
 }
 
 func recParseStaticFiles(entries []iofs.DirEntry, dir, baseDir string) error {
@@ -322,9 +332,24 @@ func withLogging(h http.Handler) http.Handler {
 	})
 }
 
+func serveIndex(c *webContext) {
+	content, ok := staticTextFiles["index.html"]
+	if !ok {
+		serve500(c)
+		return
+	}
+	c.Response.Header().Set("Content-Type", "text/html; charset=utf-8")
+	c.Response.Header().Set("Content-Security-Policy", fmt.Sprintf("script-src 'strict-dynamic' 'nonce-%s'", c.nonce))
+	c.Response.Write(bytes.ReplaceAll(content, []byte("<script>"), []byte(fmt.Sprintf(`<script nonce="%s">`, c.nonce))))
+}
+
 // serveSPA serves the SPA index.html for any route not matching a static file.
 func serveSPA(c *webContext) {
 	path := strings.TrimPrefix(c.Request.URL.Path, "/")
+	if path == "index.html" {
+		serveIndex(c)
+		return
+	}
 	if content, ok := staticTextFiles[path]; ok {
 		ext := filepath.Ext(path)
 		if mimeType := mime.TypeByExtension(ext); mimeType != "" {
@@ -391,15 +416,8 @@ func serveSPA(c *webContext) {
 			return
 		}
 	}
-
 	// Otherwise serve index.html for client-side routing
-	content, ok := staticTextFiles["index.html"]
-	if !ok {
-		serve500(c)
-		return
-	}
-	c.Response.Header().Set("Content-Type", "text/html; charset=utf-8")
-	c.Response.Write(content)
+	serveIndex(c)
 }
 
 // serveConfig returns app configuration as JSON and refreshes CSRF token.
