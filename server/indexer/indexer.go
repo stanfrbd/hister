@@ -448,7 +448,7 @@ func Iterate(fn func(*Document)) {
 	q := query.NewMatchAllQuery()
 	req := bleve.NewSearchRequest(q)
 	req.Fields = []string{"url"}
-	req.Size = 20
+	req.Size = 200
 	req.SortBy([]string{"_id"})
 	latest := ""
 	for {
