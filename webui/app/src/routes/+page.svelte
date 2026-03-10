@@ -835,7 +835,7 @@
                 </Button>
               </article>
               {#if showActionsForResult === 'history:' + r.url}
-                {actionsMessage = ''}
+                {(actionsMessage = '')}
                 <Card.Root
                   class="border-brutal-border bg-card-surface ml-8 gap-2 rounded-none border-[3px] py-3 shadow-[3px_3px_0_var(--brutal-shadow)]"
                 >
@@ -956,7 +956,7 @@
                 </Button>
               </article>
               {#if showActionsForResult === 'doc:' + r.url}
-                {actionsMessage = ''}
+                {(actionsMessage = '')}
                 <Card.Root
                   class="border-brutal-border bg-card-surface ml-8 gap-2 rounded-none border-[3px] py-3 shadow-[3px_3px_0_var(--brutal-shadow)]"
                 >

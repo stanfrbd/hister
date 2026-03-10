@@ -1,6 +1,115 @@
 <script lang="ts">
+  import { Button } from '@hister/components/ui/button';
+  import { Input } from '@hister/components/ui/input';
+  import { Label } from '@hister/components/ui/label';
+  import * as Card from '@hister/components/ui/card';
+
+  const defaultURL = 'http://127.0.0.1:4433/';
+
+  let url = $state(defaultURL);
+  let token = $state('');
+  let message = $state('');
+  let messageType: 'success' | 'error' = $state('success');
+
+  chrome.storage.local.get(['histerURL', 'histerToken'], (data) => {
+    if (!data['histerURL']) {
+      chrome.storage.local.set({ histerURL: defaultURL });
+    }
+    url = data['histerURL'] || defaultURL;
+    token = data['histerToken'] || '';
+  });
+
+  function save(e: Event) {
+    e.preventDefault();
+    chrome.storage.local.set({ histerURL: url, histerToken: token }).then(() => {
+      message = 'Settings saved';
+      messageType = 'success';
+    });
+  }
 </script>
 
-<main class="bg-background text-foreground p-6">
-  <h1 class="text-xl font-semibold">Options</h1>
-</main>
+<div class="bg-page-bg min-h-screen">
+  <!-- Page header -->
+  <div class="bg-brutal-bg border-brutal-border border-b-[3px] px-8 py-5">
+    <span class="font-outfit text-text-brand-muted text-sm font-bold tracking-widest uppercase">
+      Hister <span class="mx-1">/</span> Options
+    </span>
+  </div>
+
+  <div class="mx-auto max-w-2xl space-y-8 px-8 py-10">
+    <!-- Connection settings card -->
+    <Card.Root
+      class="bg-card-surface border-hister-indigo gap-0 overflow-hidden rounded-none border-[3px] py-0 shadow-[6px_6px_0_var(--hister-indigo)]"
+    >
+      <Card.Header class="bg-hister-indigo px-7 py-5">
+        <Card.Title class="font-outfit text-xl font-black tracking-wide text-white"
+          >Connection Settings</Card.Title
+        >
+        <Card.Description class="font-inter text-sm text-white/70"
+          >Configure how the extension connects to your Hister server.</Card.Description
+        >
+      </Card.Header>
+
+      <Card.Content class="space-y-6 p-7">
+        {#if message}
+          <div
+            class="font-inter border-l-[4px] px-4 py-3 text-sm {messageType === 'success'
+              ? 'border-l-hister-teal bg-hister-teal/10 text-hister-teal'
+              : 'border-l-hister-rose bg-hister-rose/10 text-hister-rose'}"
+          >
+            {message}
+          </div>
+        {/if}
+
+        <form onsubmit={save} class="space-y-6">
+          <div class="space-y-2">
+            <Label class="font-outfit text-text-brand text-sm font-bold">Server URL</Label>
+            <Input
+              type="text"
+              bind:value={url}
+              placeholder="http://127.0.0.1:4433/"
+              class="bg-page-bg border-hister-indigo font-fira text-text-brand placeholder:text-text-brand-muted focus-visible:border-hister-coral h-12 w-full border-[3px] px-4 text-sm shadow-none transition-colors focus-visible:ring-0"
+            />
+            <p class="text-text-brand-muted font-inter text-xs">
+              The full URL of your Hister server, including the port number.
+            </p>
+          </div>
+
+          <div class="space-y-2">
+            <Label class="font-outfit text-text-brand text-sm font-bold">Access Token</Label>
+            <Input
+              type="text"
+              bind:value={token}
+              placeholder="Optional..."
+              class="bg-page-bg border-hister-indigo font-fira text-text-brand placeholder:text-text-brand-muted focus-visible:border-hister-coral h-12 w-full border-[3px] px-4 text-sm shadow-none transition-colors focus-visible:ring-0"
+            />
+            <p class="text-text-brand-muted font-inter text-xs">
+              If your server requires authentication, enter your access token here.
+            </p>
+          </div>
+
+          <Button
+            type="submit"
+            size="lg"
+            class="bg-hister-coral border-brutal-border font-outfit h-12 w-full border-[3px] text-base font-bold tracking-wide text-white shadow-[4px_4px_0_var(--brutal-shadow)] transition-all hover:translate-x-px hover:translate-y-px hover:shadow-[2px_2px_0_var(--brutal-shadow)]"
+          >
+            Save Settings
+          </Button>
+        </form>
+      </Card.Content>
+    </Card.Root>
+
+    <!-- Indexing rules placeholder -->
+    <Card.Root
+      class="bg-card-surface border-brutal-border gap-0 overflow-hidden rounded-none border-[3px] py-0 opacity-50"
+    >
+      <Card.Header class="px-7 py-5">
+        <Card.Title class="font-outfit text-text-brand text-lg font-bold">Indexing Rules</Card.Title
+        >
+        <Card.Description class="font-inter text-text-brand-muted text-sm"
+          >Coming soon — configure which pages to index or skip.</Card.Description
+        >
+      </Card.Header>
+    </Card.Root>
+  </div>
+</div>
