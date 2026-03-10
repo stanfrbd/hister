@@ -12,6 +12,7 @@ import (
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/pkg/browser"
+	"github.com/rs/zerolog/log"
 )
 
 func InputKeys(m *model.Model, msg tea.KeyMsg) tea.Cmd {
@@ -43,7 +44,9 @@ func InputKeys(m *model.Model, msg tea.KeyMsg) tea.Cmd {
 				render.RefreshAndScroll(m)
 				return startSearch(m, m.FlashHint(config.ActionOpenResult))
 			} else if u := m.GetSelectedURL(); u != "" {
-				browser.OpenURL(u)
+				if err := browser.OpenURL(u); err != nil {
+					log.Warn().Err(err).Msg("failed to open URL in browser")
+				}
 				return tea.Batch(m.FlashHint(config.ActionOpenResult), m.PostHistoryCmd(u))
 			}
 		}
@@ -80,7 +83,9 @@ func ResultsKeys(m *model.Model, msg tea.KeyMsg) tea.Cmd {
 			render.RefreshAndScroll(m)
 			return startSearch(m, m.FlashHint(config.ActionOpenResult))
 		} else if u := m.GetSelectedURL(); u != "" {
-			browser.OpenURL(u)
+			if err := browser.OpenURL(u); err != nil {
+				log.Warn().Err(err).Msg("failed to open URL in browser")
+			}
 			return tea.Batch(m.FlashHint(config.ActionOpenResult), m.PostHistoryCmd(u))
 		}
 		return m.FlashHint(config.ActionOpenResult)

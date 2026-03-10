@@ -336,7 +336,9 @@ func serveIndex(c *webContext) {
 	}
 	c.Response.Header().Set("Content-Type", "text/html; charset=utf-8")
 	c.Response.Header().Set("Content-Security-Policy", fmt.Sprintf("script-src 'strict-dynamic' 'nonce-%s'", c.nonce))
-	c.Response.Write(bytes.ReplaceAll(content, []byte("<script>"), []byte(fmt.Sprintf(`<script nonce="%s">`, c.nonce))))
+	if _, err := c.Response.Write(bytes.ReplaceAll(content, []byte("<script>"), []byte(fmt.Sprintf(`<script nonce="%s">`, c.nonce)))); err != nil {
+		log.Warn().Err(err).Msg("failed to write index response")
+	}
 }
 
 // serveSPA serves the SPA index.html for any route not matching a static file.
@@ -355,7 +357,9 @@ func serveSPA(c *webContext) {
 			c.Response.Header().Set("Content-Type", "application/octet-stream")
 		}
 		c.Response.WriteHeader(http.StatusOK)
-		c.Response.Write(content)
+		if _, err := c.Response.Write(content); err != nil {
+			log.Warn().Err(err).Msg("failed to write static text response")
+		}
 		return
 	}
 	// If the exact file exists in the embedded app FS, serve it directly
@@ -375,7 +379,9 @@ func serveSPA(c *webContext) {
 			c.Response.Header().Set("Content-Type", "application/octet-stream")
 		}
 		c.Response.WriteHeader(http.StatusOK)
-		c.Response.Write(content)
+		if _, err := c.Response.Write(content); err != nil {
+			log.Warn().Err(err).Msg("failed to write static file response")
+		}
 		return
 	}
 
@@ -469,7 +475,9 @@ func serveSearch(c *webContext) {
 			return
 		}
 		c.Response.Header().Add("Content-Type", "application/json")
-		c.Response.Write(jr)
+		if _, err := c.Response.Write(jr); err != nil {
+			log.Warn().Err(err).Msg("failed to write search response")
+		}
 		return
 	}
 	conn, err := ws.Upgrade(c.Response, c.Request, nil)
@@ -768,7 +776,9 @@ func serveOpensearch(c *webContext) {
   <Url type="text/html" template="%s/?q={searchTerms}"/>
 </OpenSearchDescription>`, baseURL)
 	c.Response.Header().Set("Content-Type", "application/xml")
-	c.Response.Write([]byte(xml))
+	if _, err := c.Response.Write([]byte(xml)); err != nil {
+		log.Warn().Err(err).Msg("failed to write opensearch response")
+	}
 }
 
 func serveAddAlias(c *webContext) {
@@ -829,7 +839,9 @@ func serveFavicon(c *webContext) {
 		return
 	}
 	c.Response.Header().Add("Content-Type", "image/vnd.microsoft.icon")
-	c.Response.Write(i)
+	if _, err := c.Response.Write(i); err != nil {
+		log.Warn().Err(err).Msg("failed to write favicon response")
+	}
 }
 
 func serveStatic(c *webContext) {

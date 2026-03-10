@@ -15,6 +15,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/pkg/browser"
+	"github.com/rs/zerolog/log"
 )
 
 func DispatchCommonAction(m *model.Model, action config.Action) (tea.Cmd, bool) {
@@ -77,7 +78,9 @@ func ExecuteAction(m *model.Model, action config.Action) tea.Cmd {
 	case config.ActionOpenResult:
 		if m.SelectedIdx >= 0 {
 			if u := m.GetSelectedURL(); u != "" {
-				browser.OpenURL(u)
+				if err := browser.OpenURL(u); err != nil {
+					log.Warn().Err(err).Msg("failed to open URL in browser")
+				}
 				return tea.Batch(m.FlashHint(config.ActionOpenResult), m.PostHistoryCmd(u))
 			}
 		}

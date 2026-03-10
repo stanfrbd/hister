@@ -380,7 +380,9 @@ func yesNoPrompt(label string, def bool) bool {
 	var s string
 
 	for {
-		os.Stderr.Write(prompt)
+		if _, err := os.Stderr.Write(prompt); err != nil {
+			return def
+		}
 		s, _ = r.ReadString('\n')
 		s = strings.TrimSpace(s)
 		if s == "" {

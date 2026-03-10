@@ -18,14 +18,13 @@ import (
 	"github.com/asciimoo/hister/server/indexer"
 	"github.com/asciimoo/hister/ui/theme"
 
-	"github.com/rs/zerolog/log"
-
 	"github.com/charmbracelet/bubbles/spinner"
 	"github.com/charmbracelet/bubbles/textinput"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/gorilla/websocket"
 	"github.com/muesli/termenv"
+	"github.com/rs/zerolog/log"
 )
 
 type Model struct {

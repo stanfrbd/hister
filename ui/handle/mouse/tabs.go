@@ -9,6 +9,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/pkg/browser"
+	"github.com/rs/zerolog/log"
 )
 
 func focusAddField(m *model.Model, idx int) {
@@ -95,7 +96,9 @@ func historyClick(m *model.Model, msg tea.MouseMsg) tea.Cmd {
 	idx := (msg.Y - model.RowVPStart) / historyItemHeight
 	if idx >= 0 && idx < len(m.HistoryItems) && (msg.Y-model.RowVPStart)%historyItemHeight < historyClickableRows {
 		if idx == m.HistoryIdx {
-			browser.OpenURL(m.HistoryItems[idx].URL)
+			if err := browser.OpenURL(m.HistoryItems[idx].URL); err != nil {
+				log.Warn().Err(err).Msg("failed to open URL in browser")
+			}
 		} else {
 			m.HistoryIdx = idx
 		}

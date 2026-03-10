@@ -12,6 +12,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/pkg/browser"
+	"github.com/rs/zerolog/log"
 )
 
 type Deps struct {
@@ -239,7 +240,9 @@ func (h *Handler) viewportClick(m *model.Model, msg tea.MouseMsg) tea.Cmd {
 			render.RefreshAndScroll(m)
 			return h.StartSearch(m)
 		} else if u := m.GetSelectedURL(); u != "" {
-			browser.OpenURL(u)
+			if err := browser.OpenURL(u); err != nil {
+				log.Warn().Err(err).Msg("failed to open URL in browser")
+			}
 			return m.PostHistoryCmd(u)
 		}
 	} else {

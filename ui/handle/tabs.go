@@ -12,6 +12,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/pkg/browser"
+	"github.com/rs/zerolog/log"
 )
 
 func TabKeys(m *model.Model, msg tea.KeyMsg) tea.Cmd {
@@ -59,7 +60,9 @@ func HistoryKeys(m *model.Model, msg tea.KeyMsg) tea.Cmd {
 		return m.FlashHint(config.ActionScrollDown)
 	case config.ActionOpenResult:
 		if m.HistoryIdx >= 0 && m.HistoryIdx < len(m.HistoryItems) {
-			browser.OpenURL(m.HistoryItems[m.HistoryIdx].URL)
+			if err := browser.OpenURL(m.HistoryItems[m.HistoryIdx].URL); err != nil {
+				log.Warn().Err(err).Msg("failed to open URL in browser")
+			}
 		}
 		return m.FlashHint(config.ActionOpenResult)
 	case config.ActionDeleteResult:
