@@ -103,7 +103,7 @@ app:
   access_token: 'your-secret-token-here'
 ```
 
-The web UI automatically prompts for and stores the access token when configured. The access token has to be added to the browser extension as wel.
+The web UI automatically prompts for and stores the access token when configured. The access token has to be added to the browser extension as well.
 
 For command-line usage with `curl` or similar tools, include the header in your requests:
 
