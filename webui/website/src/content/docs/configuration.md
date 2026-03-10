@@ -32,6 +32,9 @@ server:
   base_url: 'http://127.0.0.1:4433'
   database: 'db.sqlite3'
 
+indexer:
+  detect_languages: true
+
 hotkeys:
   web:
     '/': 'focus_search_input'
@@ -48,6 +51,99 @@ sensitive_content_patterns:
   aws_access_key: 'AKIA[0-9A-Z]{16}'
   github_token: '(ghp|gho|ghu|ghs|ghr)_[a-zA-Z0-9]{36}'
 ```
+
+## `app` Section
+
+| Key                       | Type   | Default                               | Description                                                                    |
+| ------------------------- | ------ | ------------------------------------- | ------------------------------------------------------------------------------ |
+| `directory`               | string | platform default                      | Directory where Hister stores its data (index, rules, secret key).             |
+| `search_url`              | string | `https://google.com/search?q={query}` | Fallback web search URL. Use `{query}` as the placeholder for the search term. |
+| `access_token`            | string | (none)                                | Optional access token for securing the API. See [Access Token](#access-token). |
+| `log_level`               | string | `info`                                | Log verbosity. One of: `debug`, `info`, `warn`, `error`.                       |
+| `debug_sql`               | bool   | `false`                               | Enable verbose SQL query logging.                                              |
+| `open_results_on_new_tab` | bool   | `false`                               | Open search results in a new browser tab instead of the current tab.           |
+
+## `server` Section
+
+| Key        | Type   | Default                | Description                                                                                                  |
+| ---------- | ------ | ---------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `address`  | string | `127.0.0.1:4433`       | Host and port to listen on. Use `[::]:4433` or `0.0.0.0:4433` to listen on all interfaces.                   |
+| `base_url` | string | derived from `address` | Public URL of the Hister instance. Required when `address` uses `0.0.0.0`. Must match how you access Hister. |
+| `database` | string | `db.sqlite3`           | SQLite database filename (relative to `app.directory`).                                                      |
+
+## TUI Settings
+
+TUI settings are configured in a separate `tui.yaml` file located in the same directory as your main config file. This file is automatically created with default values when you first run `hister search`.
+
+### Theme Settings
+
+| Key            | Type   | Default            | Description                                                                                             |
+| -------------- | ------ | ------------------ | ------------------------------------------------------------------------------------------------------- |
+| `dark_theme`   | string | `catppuccin-mocha` | Theme to use in dark mode. Available themes: catppuccin, dracula, gruvbox, nord, rose-pine, tokyonight. |
+| `light_theme`  | string | `catppuccin-latte` | Theme to use in light mode.                                                                             |
+| `color_scheme` | string | `auto`             | Color scheme mode: `auto` (follow system), `dark`, or `light`.                                          |
+| `themes_dir`   | string | (built-in themes)  | Custom directory for theme YAML files (optional).                                                       |
+
+**Built-in themes**: catppuccin-mocha, catppuccin-frappe, catppuccin-macchiato, catppuccin-latte, dracula, gruvbox, nord, rose-pine, tokyonight.
+
+## `indexer` Section
+
+| Key               | Type | Default | Description                                                                                                                                                      |
+| ----------------- | ---- | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `detect_languages` | bool | `true`  | Enable automatic language detection for indexed pages. See [Language Detection](#language-detection) for details on memory/CPU impact and reindexing requirements. |
+
+## Access Token
+
+The `app.access_token` setting provides a simple authentication mechanism to secure your Hister instance. When configured, clients must include the token in API requests using the `X-Access-Token` HTTP header. This is particularly useful when exposing Hister to the network or internet, preventing unauthorized access to your browsing history and search index.
+
+To use the access token, set it in your configuration file:
+
+```yaml
+app:
+  access_token: 'your-secret-token-here'
+```
+
+The web UI automatically prompts for and stores the access token when configured. The access token has to be added to the browser extension as wel.
+
+For command-line usage with `curl` or similar tools, include the header in your requests:
+
+```bash
+curl -H "X-Access-Token: your-secret-token-here" http://localhost:4433/api/config
+```
+
+**Security note**: The access token is transmitted in plain text with each request. When exposing Hister over the network, always use HTTPS (via reverse proxy) to encrypt the token in transit. The token provides basic access control but does not replace proper authentication systems for multi-user scenarios.
+
+## Language Detection
+
+The `indexer.detect_languages` option (default: `true`) controls automatic language detection for indexed pages. When enabled, Hister uses language detection libraries to identify the language of each page's content, creating separate language-specific indexes that improve search accuracy through language-aware tokenization and stemming.
+
+**Performance considerations**: Language detection increases both CPU usage and memory consumption. Each document requires additional processing to analyze text and determine its language, and separate indexes are maintained for each detected language. If you're experiencing memory pressure or slow indexing performance, especially with large numbers of documents, consider disabling this feature.
+
+**Important**: Changing this setting requires a full reindex to take effect. After enabling or disabling language detection in your config file, run:
+
+```bash
+hister reindex
+```
+
+The reindex operation will rebuild all indexes according to the new setting. With language detection disabled, all documents are indexed using a single default analyzer, reducing memory overhead and simplifying the indexing process at the cost of potentially less accurate search results for non-English content.
+
+## `hotkeys.web` Section
+
+Defines keyboard shortcuts for the web interface. Each entry maps a key combination to an action.
+
+**Key format**: `[modifier+]key` where modifier is `ctrl`, `alt`, or `meta`. Key can be a letter, digit, or special key (`enter`, `tab`, `arrowup`, `arrowdown`, etc.).
+
+| Action                        | Description                                                     |
+| ----------------------------- | --------------------------------------------------------------- |
+| `focus_search_input`          | Move focus to the search input box                              |
+| `open_result`                 | Open the selected (or first) result                             |
+| `open_result_in_new_tab`      | Open the selected result in a new tab                           |
+| `select_next_result`          | Move selection to the next result                               |
+| `select_previous_result`      | Move selection to the previous result                           |
+| `open_query_in_search_engine` | Open the current query in the configured fallback search engine |
+| `view_result_popup`           | Open the offline preview popup for the selected result          |
+| `autocomplete`                | Accept the autocomplete suggestion                              |
+| `show_hotkeys`                | Show the keyboard shortcuts help overlay                        |
 
 ## TUI Configuration
 
@@ -86,68 +182,7 @@ hotkeys:
   alt+4: 'tab_add'
 ```
 
----
-
-## `app` Section
-
-| Key                       | Type   | Default                               | Description                                                                    |
-| ------------------------- | ------ | ------------------------------------- | ------------------------------------------------------------------------------ |
-| `directory`               | string | platform default                      | Directory where Hister stores its data (index, rules, secret key).             |
-| `search_url`              | string | `https://google.com/search?q={query}` | Fallback web search URL. Use `{query}` as the placeholder for the search term. |
-| `log_level`               | string | `info`                                | Log verbosity. One of: `debug`, `info`, `warn`, `error`.                       |
-| `debug_sql`               | bool   | `false`                               | Enable verbose SQL query logging.                                              |
-| `open_results_on_new_tab` | bool   | `false`                               | Open search results in a new browser tab instead of the current tab.           |
-
----
-
-## `server` Section
-
-| Key        | Type   | Default                | Description                                                                                                  |
-| ---------- | ------ | ---------------------- | ------------------------------------------------------------------------------------------------------------ |
-| `address`  | string | `127.0.0.1:4433`       | Host and port to listen on. Use `[::]:4433` or `0.0.0.0:4433` to listen on all interfaces.                   |
-| `base_url` | string | derived from `address` | Public URL of the Hister instance. Required when `address` uses `0.0.0.0`. Must match how you access Hister. |
-| `database` | string | `db.sqlite3`           | SQLite database filename (relative to `app.directory`).                                                      |
-
----
-
-## TUI Settings
-
-TUI settings are configured in a separate `tui.yaml` file located in the same directory as your main config file. This file is automatically created with default values when you first run `hister search`.
-
-### Theme Settings
-
-| Key            | Type   | Default            | Description                                                                                             |
-| -------------- | ------ | ------------------ | ------------------------------------------------------------------------------------------------------- |
-| `dark_theme`   | string | `catppuccin-mocha` | Theme to use in dark mode. Available themes: catppuccin, dracula, gruvbox, nord, rose-pine, tokyonight. |
-| `light_theme`  | string | `catppuccin-latte` | Theme to use in light mode.                                                                             |
-| `color_scheme` | string | `auto`             | Color scheme mode: `auto` (follow system), `dark`, or `light`.                                          |
-| `themes_dir`   | string | (built-in themes)  | Custom directory for theme YAML files (optional).                                                       |
-
-**Built-in themes**: catppuccin-mocha, catppuccin-frappe, catppuccin-macchiato, catppuccin-latte, dracula, gruvbox, nord, rose-pine, tokyonight.
-
----
-
-## `hotkeys.web` Section
-
-Defines keyboard shortcuts for the web interface. Each entry maps a key combination to an action.
-
-**Key format**: `[modifier+]key` where modifier is `ctrl`, `alt`, or `meta`. Key can be a letter, digit, or special key (`enter`, `tab`, `arrowup`, `arrowdown`, etc.).
-
-| Action                        | Description                                                     |
-| ----------------------------- | --------------------------------------------------------------- |
-| `focus_search_input`          | Move focus to the search input box                              |
-| `open_result`                 | Open the selected (or first) result                             |
-| `open_result_in_new_tab`      | Open the selected result in a new tab                           |
-| `select_next_result`          | Move selection to the next result                               |
-| `select_previous_result`      | Move selection to the previous result                           |
-| `open_query_in_search_engine` | Open the current query in the configured fallback search engine |
-| `view_result_popup`           | Open the offline preview popup for the selected result          |
-| `autocomplete`                | Accept the autocomplete suggestion                              |
-| `show_hotkeys`                | Show the keyboard shortcuts help overlay                        |
-
----
-
-## TUI Hotkeys
+### TUI Hotkeys
 
 TUI keyboard shortcuts are configured in `tui.yaml` under the `hotkeys` section. See the [tui.yaml example](#tui-configuration) above.
 
@@ -168,8 +203,6 @@ TUI keyboard shortcuts are configured in `tui.yaml` under the `hotkeys` section.
 | `tab_rules`       | Switch to the Rules tab (manage blacklist/priority/alias rules) |
 | `tab_add`         | Switch to the Add tab (manually add URLs to index)              |
 
----
-
 ## `sensitive_content_patterns` Section
 
 A map of named regex patterns. Any indexed page containing a match will have that field redacted before storage. Useful for preventing accidental indexing of secrets, tokens, or credentials.
@@ -180,8 +213,6 @@ sensitive_content_patterns:
 ```
 
 Default patterns cover common secrets: AWS keys, GitHub tokens, SSH/PGP private keys.
-
----
 
 ## Environment Variables
 
