@@ -1,8 +1,7 @@
 <script lang="ts">
   import { Button } from '@hister/components/ui/button';
-  import { Input } from '@hister/components/ui/input';
-  import { Label } from '@hister/components/ui/label';
   import * as Card from '@hister/components/ui/card';
+  import SettingsInput from './SettingsInput.svelte';
 
   const defaultURL = 'http://127.0.0.1:4433/';
 
@@ -62,31 +61,19 @@
         {/if}
 
         <form onsubmit={save} class="space-y-6">
-          <div class="space-y-2">
-            <Label class="font-outfit text-text-brand text-sm font-bold">Server URL</Label>
-            <Input
-              type="text"
-              bind:value={url}
-              placeholder="http://127.0.0.1:4433/"
-              class="bg-page-bg border-hister-indigo font-fira text-text-brand placeholder:text-text-brand-muted focus-visible:border-hister-coral h-12 w-full border-[3px] px-4 text-sm shadow-none transition-colors focus-visible:ring-0"
-            />
-            <p class="text-text-brand-muted font-inter text-xs">
-              The full URL of your Hister server, including the port number.
-            </p>
-          </div>
+          <SettingsInput
+            label="Server URL"
+            bind:value={url}
+            placeholder="http://127.0.0.1:4433/"
+            description="The full URL of your Hister server, including the port number."
+          />
 
-          <div class="space-y-2">
-            <Label class="font-outfit text-text-brand text-sm font-bold">Access Token</Label>
-            <Input
-              type="text"
-              bind:value={token}
-              placeholder="Optional..."
-              class="bg-page-bg border-hister-indigo font-fira text-text-brand placeholder:text-text-brand-muted focus-visible:border-hister-coral h-12 w-full border-[3px] px-4 text-sm shadow-none transition-colors focus-visible:ring-0"
-            />
-            <p class="text-text-brand-muted font-inter text-xs">
-              If your server requires authentication, enter your access token here.
-            </p>
-          </div>
+          <SettingsInput
+            label="Access Token"
+            bind:value={token}
+            placeholder="Optional..."
+            description="If your server requires authentication, enter your access token here."
+          />
 
           <Button
             type="submit"
