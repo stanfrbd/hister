@@ -487,7 +487,7 @@ func indexURL(u string) error {
 		URL:  u,
 		HTML: buf.String(),
 	}
-	if err := d.Process(); err != nil {
+	if err := d.Process(nil); err != nil {
 		return errors.New(`failed to process document: ` + err.Error())
 	}
 	if d.Favicon == "" {

@@ -36,9 +36,10 @@ import (
 var Version = 2
 
 type indexer struct {
-	idx      bleve.IndexAlias       // used only for Search()
-	indexers map[string]bleve.Index // default and language specific indexers
-	dir      string
+	idx          bleve.IndexAlias       // used only for Search()
+	indexers     map[string]bleve.Index // default and language specific indexers
+	dir          string
+	langDetector LanguageDetector
 }
 
 const defaultIndexerName = "index.db"
@@ -97,7 +98,7 @@ func Init(cfg *config.Config) error {
 	}
 	sensitiveContentRe = regexp.MustCompile(fmt.Sprintf("(%s)", strings.Join(sp, "|")))
 	var err error
-	i, err = initializeIndexer(cfg.FullPath(""))
+	i, err = initializeIndexer(cfg.FullPath(""), true)
 	if err != nil {
 		return err
 	}
@@ -106,7 +107,7 @@ func Init(cfg *config.Config) error {
 	return nil
 }
 
-func initializeIndexer(basePath string) (*indexer, error) {
+func initializeIndexer(basePath string, detectLanguages bool) (*indexer, error) {
 	if _, err := os.Stat(basePath); errors.Is(err, os.ErrNotExist) {
 		if err := os.MkdirAll(basePath, os.ModePerm); err != nil {
 			return nil, err
@@ -131,6 +132,12 @@ func initializeIndexer(basePath string) (*indexer, error) {
 			defaultIndexerName: idx,
 		},
 		dir: basePath,
+	}
+	if !detectLanguages {
+		i.langDetector = NewNullLanguageDetector()
+		return i, nil
+	} else {
+		i.langDetector = NewLanguageDetector()
 	}
 	entries, err := os.ReadDir(basePath)
 	if err != nil {
@@ -158,7 +165,7 @@ func init() {
 }
 
 func Reindex(basePath string, rules *config.Rules, skipSensitiveChecks bool) error {
-	idx, err := initializeIndexer(basePath)
+	idx, err := initializeIndexer(basePath, true)
 	if err != nil {
 		return err
 	}
@@ -168,7 +175,7 @@ func Reindex(basePath string, rules *config.Rules, skipSensitiveChecks bool) err
 			return err
 		}
 	}
-	tmpIdx, err := initializeIndexer(tmpBasePath)
+	tmpIdx, err := initializeIndexer(tmpBasePath, true)
 	if err != nil {
 		return err
 	}
@@ -191,7 +198,7 @@ func Reindex(basePath string, rules *config.Rules, skipSensitiveChecks bool) err
 			log.Debug().Str("URL", d.URL).Msg("Indexing")
 			d.skipSensitiveCheck = skipSensitiveChecks
 			origDate := d.Added
-			if err := d.Process(); err != nil {
+			if err := d.Process(tmpIdx.langDetector); err != nil {
 				if errors.Is(err, ErrSensitiveContent) {
 					log.Warn().Err(err).Str("URL", d.URL).Msg("Skipping document, sensitive content")
 					continue
@@ -267,7 +274,7 @@ func (i *indexer) Total() uint64 {
 
 func (i *indexer) AddDocument(d *Document) error {
 	if !d.processed {
-		if err := d.Process(); err != nil {
+		if err := d.Process(i.langDetector); err != nil {
 			return err
 		}
 	}
@@ -316,6 +323,11 @@ func newMultiBatch(i *indexer) *multiBatch {
 }
 
 func (b *multiBatch) Add(d *Document) error {
+	if !d.processed {
+		if err := d.Process(i.langDetector); err != nil {
+			return err
+		}
+	}
 	idx := b.indexer.getOrCreate(d.Language)
 	if _, ok := b.batches[d.Language]; !ok {
 		b.batches[d.Language] = idx.NewBatch()

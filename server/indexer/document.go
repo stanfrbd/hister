@@ -67,9 +67,12 @@ func (d *Document) DownloadFavicon(userAgent string) error {
 	return nil
 }
 
-func (d *Document) Process() error {
+func (d *Document) Process(ld LanguageDetector) error {
 	if d.processed {
 		return nil
+	}
+	if ld == nil {
+		ld = NewNullLanguageDetector()
 	}
 	if !d.skipSensitiveCheck && sensitiveContentRe != nil && sensitiveContentRe.MatchString(d.HTML) {
 		log.Debug().Msg("Matching sensitive content: " + strings.Join(sensitiveContentRe.FindAllString(d.HTML, -1), ","))
@@ -108,12 +111,7 @@ func (d *Document) Process() error {
 	}
 	d.Title = strings.ReplaceAll(sanitizer.Sanitize(d.Title), "&#34;", `"`)
 
-	lang, err := DetectLanguage(d.Text)
-	if err != nil {
-		d.Language = UnknownLanguage
-	} else {
-		d.Language = strings.ToLower(lang.IsoCode639_1().String())
-	}
+	d.Language = ld.DetectLanguage(d.Text)
 
 	d.processed = true
 	return nil

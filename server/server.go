@@ -564,11 +564,6 @@ func serveAdd(c *webContext) {
 		d.Text = f.Get("text")
 	}
 	if !c.Config.Rules.IsSkip(d.URL) && !strings.HasPrefix(d.URL, c.Config.BaseURL("/")) {
-		if err := d.Process(); err != nil {
-			log.Error().Err(err).Str("URL", d.URL).Msg("failed to process document")
-			serve500(c)
-			return
-		}
 		err := indexer.Add(d)
 		log.Debug().Str("URL", d.URL).Msg("item added to index")
 		if err != nil {

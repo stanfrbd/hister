@@ -1,7 +1,7 @@
 package indexer
 
 import (
-	"errors"
+	"strings"
 
 	// register bleve language analyzers
 	_ "github.com/blevesearch/bleve/v2/analysis/lang/ar"
@@ -68,11 +68,33 @@ var Languages = []lingua.Language{
 	// supported by bleve but not by lingua: no, gl, in
 }
 
-var langDetector = lingua.NewLanguageDetectorBuilder().FromLanguages(Languages...).Build()
+type LanguageDetector interface {
+	DetectLanguage(string) string
+}
 
-func DetectLanguage(s string) (*lingua.Language, error) {
-	if language, exists := langDetector.DetectLanguageOf(s); exists {
-		return &language, nil
+type nullLangDetector struct{}
+
+type langDetector struct {
+	detector lingua.LanguageDetector
+}
+
+func NewLanguageDetector() LanguageDetector {
+	return &langDetector{
+		detector: lingua.NewLanguageDetectorBuilder().FromLanguages(Languages...).Build(),
 	}
-	return nil, errors.New("unknown language")
+}
+
+func NewNullLanguageDetector() LanguageDetector {
+	return &nullLangDetector{}
+}
+
+func (d *langDetector) DetectLanguage(s string) string {
+	if language, exists := d.detector.DetectLanguageOf(s); exists {
+		return strings.ToLower(language.IsoCode639_1().String())
+	}
+	return UnknownLanguage
+}
+
+func (d *nullLangDetector) DetectLanguage(s string) string {
+	return UnknownLanguage
 }
