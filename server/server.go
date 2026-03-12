@@ -538,11 +538,10 @@ func doSearch(query *indexer.Query, cfg *config.Config) (*indexer.Results, error
 		res.QuerySuggestion = model.GetQuerySuggestion(oq)
 	}
 	if len(cfg.Indexer.Directories) > 0 {
-		basePrefix := cfg.BasePathPrefix()
 		for _, doc := range res.Documents {
 			if strings.HasPrefix(doc.URL, "file://") {
 				filePath := strings.TrimPrefix(doc.URL, "file://")
-				doc.URL = basePrefix + "/api/file?path=" + url.QueryEscape(filePath)
+				doc.URL = cfg.BaseURL("/api/file?path=") + url.QueryEscape(filePath)
 			}
 		}
 	}

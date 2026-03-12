@@ -54,7 +54,7 @@ func indexDirectory(dir string) error {
 	indexed := 0
 	skipped := 0
 
-	log.Info().Str("directory", dir).Msg("Indexing directory")
+	log.Debug().Str("directory", dir).Msg("Indexing directory")
 
 	err = filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
