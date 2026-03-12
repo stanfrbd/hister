@@ -391,6 +391,7 @@ func Search(cfg *config.Config, q *Query) (*Results, error) {
 	switch q.Highlight {
 	case "HTML":
 		req.Highlight = bleve.NewHighlight()
+		req.Highlight.Fields = []string{"text"}
 	case "text":
 		req.Highlight = bleve.NewHighlightWithStyle("ansi")
 	case "tui":
