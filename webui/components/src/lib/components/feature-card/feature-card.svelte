@@ -43,13 +43,13 @@
   {/if}
   {#if horizontal}
     <div class="flex flex-col gap-2">
-      <h3 class="{textColor} font-space text-xl font-extrabold tracking-[1px] md:text-3xl">
+      <h3 class="{textColor} font-space text-xl font-extrabold tracking-[1px] md:text-3xl uppercase">
         {title}
       </h3>
       <p class="{descColor} font-inter text-sm leading-relaxed md:text-lg">{description}</p>
     </div>
   {:else}
-    <h3 class="{textColor} font-space text-xl font-extrabold tracking-[1px] md:text-3xl">
+    <h3 class="{textColor} font-space text-xl font-extrabold tracking-[1px] md:text-3xl uppercase">
       {title}
     </h3>
     <p class="{descColor} font-inter text-sm leading-relaxed md:text-lg">{description}</p>

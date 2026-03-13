@@ -15,7 +15,7 @@
     [
       {
         icon: Shield,
-        title: 'PRIVACY-FOCUSED',
+        title: 'Privacy-focused',
         desc: 'Keep your browsing history indexed locally. No remote servers, no tracking, no data leaving your machine.',
         bg: 'bg-brutal-card',
         textColor: 'text-[var(--text-primary)]',
@@ -24,7 +24,7 @@
       },
       {
         icon: FileText,
-        title: 'FULL-TEXT INDEXING',
+        title: 'Full-text Indexing',
         desc: "Search through the actual content of web pages you've visited, not just URLs and titles.",
         bg: 'bg-brutal-card',
         textColor: 'text-[var(--text-primary)]',
@@ -35,7 +35,7 @@
     [
       {
         icon: Zap,
-        title: 'BLAZING FAST',
+        title: 'Blazing Fast',
         desc: 'Instant results as you type. Full keyboard-driven workflow for maximum efficiency.',
         bg: 'bg-hister-indigo',
         textColor: 'text-white',
@@ -44,7 +44,7 @@
       },
       {
         icon: Search,
-        title: 'ADVANCED SEARCH',
+        title: 'Advanced Search',
         desc: 'Powerful query language for precise results.',
         bg: 'bg-[var(--text-primary)]',
         textColor: 'text-white',
@@ -53,7 +53,7 @@
       },
       {
         icon: Settings,
-        title: 'FLEXIBLE MANAGEMENT',
+        title: 'Flexible Management',
         desc: 'Configure blacklist and priority rules to control your indexed content.',
         bg: 'bg-hister-teal',
         textColor: 'text-white',
@@ -64,7 +64,7 @@
     [
       {
         icon: Puzzle,
-        title: 'BROWSER EXTENSIONS',
+        title: 'Browser Extensions',
         desc: 'Available for Chrome and Firefox.',
         bg: 'bg-hister-lime',
         textColor: 'text-white',
@@ -73,7 +73,7 @@
       },
       {
         icon: WifiOff,
-        title: 'OFFLINE PREVIEW',
+        title: 'Offline Preview',
         desc: 'Readable offline previews of any result. Access your saved pages without internet.',
         bg: 'bg-hister-coral',
         textColor: 'text-white',
@@ -108,7 +108,7 @@
   id="features"
   class="bg-brutal-bg mx-auto flex max-w-[2000px] flex-col gap-10 px-6 py-12 md:px-12 md:py-16"
 >
-  <PageHeader color="hister-coral" size="lg" tag="h2">FEATURES</PageHeader>
+  <PageHeader color="hister-coral" size="lg" tag="h2">Features</PageHeader>
 
   <div class="flex flex-col gap-6">
     {#each rows as row}
