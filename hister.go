@@ -278,7 +278,25 @@ func init() {
 			return i.(string)
 		},
 		FormatLevel: func(i any) string {
-			return strings.ToUpper(fmt.Sprintf("| %-6s|", i))
+			level := strings.ToUpper(fmt.Sprintf("%-6s", i))
+			var color lipgloss.Color
+			switch i {
+			case "trace":
+				color = lipgloss.Color("240") // dark gray
+			case "debug":
+				color = lipgloss.Color("12") // bright blue
+			case "info":
+				color = lipgloss.Color("10") // bright green
+			case "warn", "warning":
+				color = lipgloss.Color("11") // bright yellow
+			case "error":
+				color = lipgloss.Color("9") // bright red
+			case "fatal", "panic":
+				color = lipgloss.Color("196") // bold red
+			default:
+				color = lipgloss.Color("15") // white
+			}
+			return fmt.Sprintf("| %s |", lipgloss.NewStyle().Foreground(color).Bold(true).Render(level))
 		},
 	}
 	zerolog.CallerMarshalFunc = func(_ uintptr, file string, line int) string {
