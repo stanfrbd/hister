@@ -32,7 +32,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-var Version = 2
+var Version = 3
 
 type indexer struct {
 	idx          bleve.IndexAlias       // used only for Search()
@@ -581,6 +581,7 @@ func createMapping(lang string) mapping.IndexMapping {
 	docMapping.AddFieldMappingsAt("favicon", noIdxMap)
 	docMapping.AddFieldMappingsAt("html", noIdxMap)
 	docMapping.AddFieldMappingsAt("added", bleve.NewNumericFieldMapping())
+	docMapping.AddFieldMappingsAt("type", bleve.NewNumericFieldMapping())
 
 	im.DefaultMapping = docMapping
 
