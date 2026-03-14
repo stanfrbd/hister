@@ -145,7 +145,7 @@ The Firefox URL database file is usually located at /home/[USER]/.mozilla/[PROFI
 The Chrome/Chromium URL database fiel is usually located at /home/[USER]/.config/chromium/Default/History
 Leave BROWSER_TYPE and DB_PATH empty for auto detection
 `,
-	Args: cobra.RangeArgs(0, 2),
+	Args: ZeroOrTwoArgs(),
 	Run:  importHistory,
 }
 
@@ -998,5 +998,14 @@ func newClient() *client.Client {
 func main() {
 	if err := rootCmd.Execute(); err != nil {
 		os.Exit(1)
+	}
+}
+
+func ZeroOrTwoArgs() cobra.PositionalArgs {
+	return func(cmd *cobra.Command, args []string) error {
+		if len(args) != 0 && len(args) != 2 {
+			return fmt.Errorf("accepts 0 or 2 arguments, received %d", len(args))
+		}
+		return nil
 	}
 }
