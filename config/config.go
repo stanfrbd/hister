@@ -65,10 +65,11 @@ type Server struct {
 }
 
 type Directory struct {
-	Path      string   `yaml:"path" mapstructure:"path"`
-	Filetypes []string `yaml:"filetypes" mapstructure:"filetypes"`
-	Patterns  []string `yaml:"patterns" mapstructure:"patterns"`
-	Excludes  []string `yaml:"excludes" mapstructure:"excludes"`
+	Path          string   `yaml:"path"           mapstructure:"path"`
+	Filetypes     []string `yaml:"filetypes"      mapstructure:"filetypes"`
+	Patterns      []string `yaml:"patterns"       mapstructure:"patterns"`
+	Excludes      []string `yaml:"excludes"       mapstructure:"excludes"`
+	IncludeHidden bool     `yaml:"include_hidden" mapstructure:"include_hidden"`
 }
 
 type Indexer struct {

@@ -100,12 +100,13 @@ TUI settings are configured in a separate `tui.yaml` file located in the same di
 
 Each entry in `directories` is an object with the following keys:
 
-| Key         | Type     | Default | Description                                                                                           |
-| ----------- | -------- | ------- | ----------------------------------------------------------------------------------------------------- |
-| `path`      | string   | ""      | **(required)** Directory path to index. Paths starting with `~/` are expanded to your home directory. |
-| `filetypes` | string[] | (none)  | Only index files with these extensions (without the dot). e.g. `['txt', 'md']`.                       |
-| `patterns`  | string[] | (none)  | Only index files whose names match at least one glob pattern. e.g. `['doc_*', 'README*']`.            |
-| `excludes`  | string[] | (none)  | Skip files whose names match any of these glob patterns. e.g. `['*secret*', '*.tmp']`.                |
+| Key              | Type     | Default | Description                                                                                                                                                                                                           |
+| ---------------- | -------- | ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `path`           | string   | ""      | **(required)** Directory path to index. Paths starting with `~/` are expanded to your home directory.                                                                                                                 |
+| `filetypes`      | string[] | (none)  | Only index files with these extensions (without the dot). e.g. `['txt', 'md']`.                                                                                                                                       |
+| `patterns`       | string[] | (none)  | Only index files whose names match at least one glob pattern. e.g. `['doc_*', 'README*']`.                                                                                                                            |
+| `excludes`       | string[] | (none)  | Skip files whose names match any of these glob patterns. e.g. `['*secret*', '*.tmp']`.                                                                                                                                |
+| `include_hidden` | bool     | `false` | When `true`, index hidden files/directories (starting with `.`) and well-known dependency/cache directories (`node_modules`, `__pycache__`, etc.) that are skipped by default. User-specified `excludes` still apply. |
 
 When multiple filters are specified, they are applied in order: excludes first, then filetypes, then patterns. A file must pass all specified filters to be indexed. When a filter is omitted, it is not applied (all files pass).
 
@@ -127,7 +128,8 @@ indexer:
 
 Files are indexed recursively, with the following rules:
 
-- Hidden files and directories (starting with `.`) are skipped
+- Hidden files and directories (starting with `.`) are skipped unless `include_hidden: true`
+- Well-known dependency/cache directories (`node_modules`, `bower_components`, `jspm_packages`, `__pycache__`, `__pypackages__`) are skipped unless `include_hidden: true`
 - Binary files are skipped
 - Files larger than 1 MB are skipped
 - Files matching `sensitive_content_patterns` are skipped

@@ -1,6 +1,7 @@
 package indexer
 
 import (
+	"errors"
 	"fmt"
 	"io/fs"
 	"os"
@@ -8,13 +9,19 @@ import (
 	"strings"
 	"unicode/utf8"
 
+	"github.com/rs/zerolog/log"
+
 	"github.com/asciimoo/hister/config"
 	"github.com/asciimoo/hister/files"
-
-	"github.com/rs/zerolog/log"
 )
 
-var maxFileSize int64 = 1024 * 1024 // 1MB default
+var (
+	ErrEmptyFile    = errors.New("empty file")
+	ErrBinaryFile   = errors.New("binary file")
+	ErrFileTooLarge = errors.New("file too large")
+
+	maxFileSize int64 = 1024 * 1024 // 1MB default
+)
 
 func IndexAll(dirs []config.Directory) {
 	for _, dir := range dirs {
@@ -45,12 +52,12 @@ func indexDirectory(dir string, cfg config.Directory) error {
 			return nil
 		}
 		if d.IsDir() {
-			if strings.HasPrefix(d.Name(), ".") && path != dir {
+			if path != dir && files.ShouldSkipDir(d.Name(), cfg.Excludes, cfg.IncludeHidden) {
 				return filepath.SkipDir
 			}
 			return nil
 		}
-		if strings.HasPrefix(d.Name(), ".") {
+		if !cfg.IncludeHidden && strings.HasPrefix(d.Name(), ".") {
 			return nil
 		}
 		if !files.MatchesFilters(d.Name(), cfg.Filetypes, cfg.Patterns, cfg.Excludes) {
@@ -75,10 +82,10 @@ func IndexFile(path string) error {
 		return err
 	}
 	if info.Size() == 0 {
-		return fmt.Errorf("empty file")
+		return ErrEmptyFile
 	}
 	if info.Size() > maxFileSize {
-		return fmt.Errorf("file too large (%d bytes)", info.Size())
+		return fmt.Errorf("%w: %d bytes", ErrFileTooLarge, info.Size())
 	}
 
 	absPath, err := filepath.Abs(path)
@@ -98,7 +105,7 @@ func IndexFile(path string) error {
 		return fmt.Errorf("cannot read file: %w", err)
 	}
 	if !utf8.Valid(content) {
-		return fmt.Errorf("binary file")
+		return ErrBinaryFile
 	}
 
 	doc := &Document{

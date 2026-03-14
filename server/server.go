@@ -738,11 +738,23 @@ func serveFile(c *webContext) {
 		return
 	}
 
-	// Verify the file is within a configured directory
+	// Resolve symlinks to prevent a symlink inside a configured directory
+	// from serving files outside it
+	resolvedPath, err := filepath.EvalSymlinks(filePath)
+	if err != nil {
+		http.Error(c.Response, "file not found", http.StatusNotFound)
+		return
+	}
+
+	// Verify the resolved file is within a configured directory (also resolved)
 	allowed := false
 	for _, dir := range c.Config.Indexer.Directories {
 		expandedDir := filepath.Clean(files.ExpandHome(dir.Path))
-		if strings.HasPrefix(filePath, expandedDir+"/") || filePath == expandedDir {
+		resolvedDir, err := filepath.EvalSymlinks(expandedDir)
+		if err != nil {
+			continue
+		}
+		if strings.HasPrefix(resolvedPath, resolvedDir+"/") || resolvedPath == resolvedDir {
 			allowed = true
 			break
 		}
