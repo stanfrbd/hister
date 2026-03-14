@@ -87,12 +87,14 @@ var skipDirs = map[string]struct{}{
 // shouldSkipDir reports whether a directory should be excluded from watching.
 // It skips hidden directories, well-known dependency/cache directories, and
 // directories matching any exclude pattern from the config.
-func shouldSkipDir(name string, excludes []string) bool {
-	if strings.HasPrefix(name, ".") {
-		return true
-	}
-	if _, ok := skipDirs[name]; ok {
-		return true
+func shouldSkipDir(name string, excludes []string, includeHidden bool) bool {
+	if !includeHidden {
+		if strings.HasPrefix(name, ".") {
+			return true
+		}
+		if _, ok := skipDirs[name]; ok {
+			return true
+		}
 	}
 	for _, pattern := range excludes {
 		if matched, _ := filepath.Match(pattern, name); matched {
@@ -100,6 +102,11 @@ func shouldSkipDir(name string, excludes []string) bool {
 		}
 	}
 	return false
+}
+
+// ShouldSkipDir is the exported form of shouldSkipDir for use by the indexer.
+func ShouldSkipDir(name string, excludes []string, includeHidden bool) bool {
+	return shouldSkipDir(name, excludes, includeHidden)
 }
 
 // walkAndWatch registers all subdirectories of each configured directory with
@@ -119,7 +126,7 @@ func walkAndWatch(watcher *fsnotify.Watcher, dirs []config.Directory) {
 			if !d.IsDir() {
 				return nil
 			}
-			if path != expanded && shouldSkipDir(d.Name(), excludes) {
+			if path != expanded && shouldSkipDir(d.Name(), excludes, dir.IncludeHidden) {
 				return filepath.SkipDir
 			}
 			if err := watcher.Add(path); err != nil {
@@ -161,7 +168,7 @@ func handleCreate(event fsnotify.Event, dirs []config.Directory, watcher *fsnoti
 	}
 	if st.IsDir() {
 		dir := findMatchingDir(dirs, event.Name)
-		if dir == nil || shouldSkipDir(filepath.Base(event.Name), dir.Excludes) {
+		if dir == nil || shouldSkipDir(filepath.Base(event.Name), dir.Excludes, dir.IncludeHidden) {
 			return
 		}
 		if !slices.Contains(watcher.WatchList(), event.Name) {

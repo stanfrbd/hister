@@ -52,12 +52,12 @@ func indexDirectory(dir string, cfg config.Directory) error {
 			return nil
 		}
 		if d.IsDir() {
-			if strings.HasPrefix(d.Name(), ".") && path != dir {
+			if path != dir && files.ShouldSkipDir(d.Name(), cfg.Excludes, cfg.IncludeHidden) {
 				return filepath.SkipDir
 			}
 			return nil
 		}
-		if strings.HasPrefix(d.Name(), ".") {
+		if !cfg.IncludeHidden && strings.HasPrefix(d.Name(), ".") {
 			return nil
 		}
 		if !files.MatchesFilters(d.Name(), cfg.Filetypes, cfg.Patterns, cfg.Excludes) {
