@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -42,6 +43,18 @@ var (
 	cliWarningStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("11"))
 	cliBoldStyle    = lipgloss.NewStyle().Bold(true)
 )
+
+type browserDBCandidates struct {
+	name             string
+	table_name       string
+	paths_candidates []string
+}
+
+type browserDB struct {
+	name       string
+	table_name string
+	paths      []string
+}
 
 var (
 	cfgFile   string
@@ -131,12 +144,13 @@ var listURLsCmd = &cobra.Command{
 
 var importCmd = &cobra.Command{
 	Use:   "import BROWSER_TYPE DB_PATH",
-	Short: "Import Chrome or Firefox browsing history",
+	Short: "Import Chrome, Firefox or auto-detect browsing history",
 	Long: `
 The Firefox URL database file is usually located at /home/[USER]/.mozilla/[PROFILE]/places.sqlite
 The Chrome/Chromium URL database fiel is usually located at /home/[USER]/.config/chromium/Default/History
+Leave BROWSER_TYPE and DB_PATH empty for auto detection
 `,
-	Args: cobra.ExactArgs(2),
+	Args: ZeroOrTwoArgs(),
 	Run:  importHistory,
 }
 
@@ -541,18 +555,50 @@ func indexURL(u string) error {
 func importHistory(cmd *cobra.Command, args []string) {
 	// TODO: get skip rules from server
 
-	browser := args[0]
+	var browser string
+	if len(args) == 0 {
+		browser = ""
+	} else {
+		browser = args[0]
+	}
+
+	var foundDBs []browserDB
 	var table string
+	var dbFiles []string
 	switch browser {
 	case "firefox":
 		table = "moz_places"
+		dbFiles = append(dbFiles, args[1])
 	case "chrome":
 		table = "urls"
+		dbFiles = append(dbFiles, args[1])
 	default:
-		log.Fatal().Str("expected", "'firefox' or 'chrome'").Str("got", browser).Msg("Invalid browser type")
+		table = "auto-detect"
 	}
-	dbFile := args[1]
 
+	if table == "auto-detect" {
+		foundDBs = getDBPaths()
+		for _, browser := range foundDBs {
+			for _, path := range browser.paths {
+				importDB(path, browser.table_name, cmd)
+			}
+		}
+
+	} else {
+		for _, path := range dbFiles {
+			importDB(path, table, cmd)
+		}
+	}
+
+	// TODO optional date filter
+	//vf := "last_visit_time"
+	//if browser == "firefox" {
+	//	vf = "last_visit_date"
+	//}
+	//q += fmt.Sprintf(" AND %s >= datetime('now', 'localtime', '-1 month')", vf)
+}
+
+func importDB(dbFile string, table string, cmd *cobra.Command) {
 	db, err := sql.Open("sqlite3", fmt.Sprintf("file:%s?immutable=1", dbFile))
 	if err != nil {
 		log.Fatal().Err(err).Msg("Failed to open database")
@@ -594,7 +640,7 @@ func importHistory(cmd *cobra.Command, args []string) {
 		exit(1, "No URLs found to import")
 	}
 
-	if !yesNoPrompt(fmt.Sprintf("%d URLs found. Start import", count), true) {
+	if !yesNoPrompt(fmt.Sprintf("%d URLs found. Start import form "+dbFile, count), true) {
 		return
 	}
 
@@ -646,13 +692,304 @@ func importHistory(cmd *cobra.Command, args []string) {
 	if skipped != 0 {
 		log.Info().Msgf("Skipped %d URLs", skipped)
 	}
+}
 
-	// TODO optional date filter
-	//vf := "last_visit_time"
-	//if browser == "firefox" {
-	//	vf = "last_visit_date"
-	//}
-	//q += fmt.Sprintf(" AND %s >= datetime('now', 'localtime', '-1 month')", vf)
+func getDBPaths() []browserDB {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return nil
+	}
+
+	var candidates []browserDBCandidates
+
+	chromium_table := "urls"
+	firefox_table := "moz_places"
+
+	switch runtime.GOOS {
+	default:
+		log.Fatal().Msgf("Failed to dectect os")
+	case "darwin":
+		candidates = []browserDBCandidates{
+
+			// firefox
+			{
+				"Firefox",
+				firefox_table,
+				[]string{
+					filepath.Join(home, "Library", "Application Support", "Firefox", "Profiles", "*.default*", "places.sqlite"),
+					filepath.Join(home, "Library", "Application Support", "Firefox", "Profiles", "*.default-release*", "places.sqlite"),
+				},
+			},
+
+			{
+				"Firefox Developer Edition",
+				firefox_table,
+				[]string{
+					filepath.Join(home, "Library", "Application Support", "Firefox", "Profiles", "*.dev-edition-default*", "places.sqlite"),
+				},
+			},
+
+			{
+				"Zen",
+				firefox_table,
+				[]string{
+					filepath.Join(home, "Library", "Application Support", "zen", "Profiles", "*Default*", "places.sqlite"),
+				},
+			},
+
+			{
+				"Waterfox",
+				firefox_table,
+				[]string{
+					filepath.Join(home, "Library", "Application Support", "Waterfox", "Profiles", "*.default*", "places.sqlite"),
+				},
+			},
+
+			{
+				"Chrome",
+				chromium_table,
+				[]string{
+					filepath.Join(home, "Library", "Application Support", "Google", "Chrome", "Default", "History"),
+					filepath.Join(home, "Library", "Application Support", "Google", "Chrome Beta", "Default", "History"),
+					filepath.Join(home, "Library", "Application Support", "Google", "Chrome Canary", "Default", "History"),
+				},
+			},
+
+			{
+				"Chromium",
+				chromium_table,
+				[]string{
+					filepath.Join(home, "Library", "Application Support", "Chromium", "Default", "History"),
+				},
+			},
+
+			{
+				"Brave",
+				chromium_table,
+				[]string{
+					filepath.Join(home, "Library", "Application Support", "BraveSoftware", "Brave-Browser", "Default", "History"),
+					filepath.Join(home, "Library", "Application Support", "BraveSoftware", "Brave-Browser-Beta", "Default", "History"),
+				},
+			},
+
+			{
+				"Edge",
+				chromium_table,
+				[]string{
+					filepath.Join(home, "Library", "Application Support", "Microsoft Edge", "Default", "History"),
+					filepath.Join(home, "Library", "Application Support", "Microsoft Edge Beta", "Default", "History"),
+				},
+			},
+
+			{
+				"Vivaldi",
+				chromium_table,
+				[]string{
+					filepath.Join(home, "Library", "Application Support", "Vivaldi", "Default", "History"),
+				},
+			},
+
+			{
+				"Opera",
+				chromium_table,
+				[]string{
+					filepath.Join(home, "Library", "Application Support", "com.operasoftware.Opera", "Default", "History"),
+				},
+			},
+		}
+
+	case "windows":
+		localAppData := os.Getenv("LOCALAPPDATA")
+		appData := os.Getenv("APPDATA")
+		if localAppData != "" {
+			candidates = []browserDBCandidates{
+
+				{
+					"firefox",
+					firefox_table,
+					[]string{
+						filepath.Join(appData, "Mozilla", "Firefox", "Profiles", "*.default*", "places.sqlite"),
+						filepath.Join(appData, "Mozilla", "Firefox", "Profiles", "*.default-release*", "places.sqlite"),
+					},
+				},
+
+				{
+					"Zen",
+					firefox_table,
+					[]string{
+						filepath.Join(appData, "zen", "Profiles", "*.Default*", "places.sqlite"),
+					},
+				},
+
+				{
+					"Waterfox",
+					firefox_table,
+					[]string{
+						filepath.Join(appData, "Waterfox", "Profiles", "*.default*", "places.sqlite"),
+					},
+				},
+
+				{
+					"Chrome",
+					chromium_table,
+					[]string{
+						filepath.Join(localAppData, "Google", "Chrome", "User Data", "Default", "History"),
+						filepath.Join(localAppData, "Google", "Chrome Beta", "User Data", "Default", "History"),
+					},
+				},
+
+				{
+					"Chromium",
+					chromium_table,
+					[]string{
+						filepath.Join(localAppData, "Chromium", "User Data", "Default", "History"),
+					},
+				},
+
+				{
+					"Brave",
+					chromium_table,
+					[]string{
+						filepath.Join(localAppData, "BraveSoftware", "Brave-Browser", "User Data", "Default", "History"),
+					},
+				},
+
+				{
+					"Edge",
+					chromium_table,
+					[]string{
+						filepath.Join(localAppData, "Microsoft", "Edge", "User Data", "Default", "History"),
+					},
+				},
+
+				{
+					"Vivaldi",
+					chromium_table,
+					[]string{
+						filepath.Join(localAppData, "Vivaldi", "User Data", "Default", "History"),
+					},
+				},
+
+				{
+					"Opera",
+					chromium_table,
+					[]string{
+						filepath.Join(appData, "Opera Software", "Opera Stable", "History"),
+					},
+				},
+			}
+		}
+
+	case "linux":
+		candidates = []browserDBCandidates{
+
+			{
+				"firefox",
+				firefox_table,
+				[]string{
+					filepath.Join(home, "snap", "firefox", "common", ".mozilla", "firefox", "*.default*", "places.sqlite"),
+					filepath.Join(home, ".mozilla", "firefox", "*.default*", "places.sqlite"),
+				},
+			},
+			{
+				"Firefox Developer Edition",
+				firefox_table,
+				[]string{
+					filepath.Join(home, ".mozilla", "firefox", "*.dev-edition-default*", "places.sqlite"),
+				},
+			},
+
+			{
+				"Zen",
+				firefox_table,
+				[]string{
+					filepath.Join(home, ".zen", "*.Default*", "places.sqlite"),
+					filepath.Join(home, ".config", "zen", "*.Default*", "places.sqlite"),
+				},
+			},
+
+			{
+				"Waterfox",
+				firefox_table,
+				[]string{
+					filepath.Join(home, ".waterfox", "Profiles", "*.default*", "places.sqlite"),
+				},
+			},
+
+			{
+				"Chrome",
+				chromium_table,
+				[]string{
+					filepath.Join(home, ".config", "google-chrome", "Default", "History"),
+					filepath.Join(home, ".config", "google-chrome-beta", "Default", "History"),
+				},
+			},
+
+			{
+				"Chromium",
+				chromium_table,
+				[]string{
+					filepath.Join(home, ".config", "chromium", "Default", "History"),
+					filepath.Join(home, "snap", "chromium", "common", "chromium", "Default", "History"),
+				},
+			},
+
+			{
+				"Brave",
+				chromium_table,
+				[]string{
+					filepath.Join(home, ".config", "BraveSoftware", "Brave-Browser", "Default", "History"),
+				},
+			},
+
+			{
+				"Edge",
+				chromium_table,
+				[]string{
+					filepath.Join(home, ".config", "microsoft-edge", "Default", "History"),
+					filepath.Join(home, ".config", "microsoft-edge-beta", "Default", "History"),
+				},
+			},
+
+			{
+				"Vivaldi",
+				chromium_table,
+				[]string{
+					filepath.Join(home, ".config", "vivaldi", "Default", "History"),
+				},
+			},
+
+			{
+				"Opera",
+				chromium_table,
+				[]string{
+					filepath.Join(home, ".config", "opera", "Default", "History"),
+				},
+			},
+		}
+	}
+
+	var dbFiles []browserDB
+	var paths []string
+
+	for _, canidate := range candidates {
+		for _, globs := range canidate.paths_candidates {
+			matches, _ := filepath.Glob(globs)
+			for _, p := range matches {
+				if _, err := os.Stat(p); err == nil {
+					paths = append(paths, p)
+				}
+			}
+		}
+
+		if len(paths) != 0 {
+			dbFiles = append(dbFiles, browserDB{canidate.name, canidate.table_name, paths})
+		}
+		paths = []string{}
+	}
+
+	return dbFiles
+
 }
 
 func newClient() *client.Client {
@@ -666,5 +1003,14 @@ func newClient() *client.Client {
 func main() {
 	if err := rootCmd.Execute(); err != nil {
 		os.Exit(1)
+	}
+}
+
+func ZeroOrTwoArgs() cobra.PositionalArgs {
+	return func(cmd *cobra.Command, args []string) error {
+		if len(args) != 0 && len(args) != 2 {
+			return fmt.Errorf("accepts 0 or 2 arguments, received %d", len(args))
+		}
+		return nil
 	}
 }
