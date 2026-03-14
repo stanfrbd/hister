@@ -710,7 +710,6 @@ func getDBPaths() []browserDB {
 		log.Fatal().Msgf("Failed to dectect os")
 	case "darwin":
 		candidates = []browserDBCandidates{
-
 			// firefox
 			{
 				"Firefox",
@@ -720,7 +719,6 @@ func getDBPaths() []browserDB {
 					filepath.Join(home, "Library", "Application Support", "Firefox", "Profiles", "*.default-release*", "places.sqlite"),
 				},
 			},
-
 			{
 				"Firefox Developer Edition",
 				firefox_table,
@@ -728,7 +726,6 @@ func getDBPaths() []browserDB {
 					filepath.Join(home, "Library", "Application Support", "Firefox", "Profiles", "*.dev-edition-default*", "places.sqlite"),
 				},
 			},
-
 			{
 				"Zen",
 				firefox_table,
@@ -736,7 +733,6 @@ func getDBPaths() []browserDB {
 					filepath.Join(home, "Library", "Application Support", "zen", "Profiles", "*Default*", "places.sqlite"),
 				},
 			},
-
 			{
 				"Waterfox",
 				firefox_table,
@@ -744,7 +740,6 @@ func getDBPaths() []browserDB {
 					filepath.Join(home, "Library", "Application Support", "Waterfox", "Profiles", "*.default*", "places.sqlite"),
 				},
 			},
-
 			{
 				"Chrome",
 				chromium_table,
@@ -754,7 +749,6 @@ func getDBPaths() []browserDB {
 					filepath.Join(home, "Library", "Application Support", "Google", "Chrome Canary", "Default", "History"),
 				},
 			},
-
 			{
 				"Chromium",
 				chromium_table,
@@ -762,7 +756,6 @@ func getDBPaths() []browserDB {
 					filepath.Join(home, "Library", "Application Support", "Chromium", "Default", "History"),
 				},
 			},
-
 			{
 				"Brave",
 				chromium_table,
@@ -771,7 +764,6 @@ func getDBPaths() []browserDB {
 					filepath.Join(home, "Library", "Application Support", "BraveSoftware", "Brave-Browser-Beta", "Default", "History"),
 				},
 			},
-
 			{
 				"Edge",
 				chromium_table,
@@ -780,7 +772,6 @@ func getDBPaths() []browserDB {
 					filepath.Join(home, "Library", "Application Support", "Microsoft Edge Beta", "Default", "History"),
 				},
 			},
-
 			{
 				"Vivaldi",
 				chromium_table,
@@ -788,7 +779,6 @@ func getDBPaths() []browserDB {
 					filepath.Join(home, "Library", "Application Support", "Vivaldi", "Default", "History"),
 				},
 			},
-
 			{
 				"Opera",
 				chromium_table,
@@ -797,13 +787,11 @@ func getDBPaths() []browserDB {
 				},
 			},
 		}
-
 	case "windows":
 		localAppData := os.Getenv("LOCALAPPDATA")
 		appData := os.Getenv("APPDATA")
 		if localAppData != "" {
 			candidates = []browserDBCandidates{
-
 				{
 					"firefox",
 					firefox_table,
@@ -812,7 +800,6 @@ func getDBPaths() []browserDB {
 						filepath.Join(appData, "Mozilla", "Firefox", "Profiles", "*.default-release*", "places.sqlite"),
 					},
 				},
-
 				{
 					"Zen",
 					firefox_table,
@@ -820,7 +807,6 @@ func getDBPaths() []browserDB {
 						filepath.Join(appData, "zen", "Profiles", "*.Default*", "places.sqlite"),
 					},
 				},
-
 				{
 					"Waterfox",
 					firefox_table,
@@ -828,7 +814,6 @@ func getDBPaths() []browserDB {
 						filepath.Join(appData, "Waterfox", "Profiles", "*.default*", "places.sqlite"),
 					},
 				},
-
 				{
 					"Chrome",
 					chromium_table,
@@ -837,7 +822,6 @@ func getDBPaths() []browserDB {
 						filepath.Join(localAppData, "Google", "Chrome Beta", "User Data", "Default", "History"),
 					},
 				},
-
 				{
 					"Chromium",
 					chromium_table,
@@ -845,7 +829,6 @@ func getDBPaths() []browserDB {
 						filepath.Join(localAppData, "Chromium", "User Data", "Default", "History"),
 					},
 				},
-
 				{
 					"Brave",
 					chromium_table,
@@ -853,7 +836,6 @@ func getDBPaths() []browserDB {
 						filepath.Join(localAppData, "BraveSoftware", "Brave-Browser", "User Data", "Default", "History"),
 					},
 				},
-
 				{
 					"Edge",
 					chromium_table,
@@ -861,7 +843,6 @@ func getDBPaths() []browserDB {
 						filepath.Join(localAppData, "Microsoft", "Edge", "User Data", "Default", "History"),
 					},
 				},
-
 				{
 					"Vivaldi",
 					chromium_table,
@@ -869,7 +850,6 @@ func getDBPaths() []browserDB {
 						filepath.Join(localAppData, "Vivaldi", "User Data", "Default", "History"),
 					},
 				},
-
 				{
 					"Opera",
 					chromium_table,
@@ -879,10 +859,8 @@ func getDBPaths() []browserDB {
 				},
 			}
 		}
-
 	case "linux":
 		candidates = []browserDBCandidates{
-
 			{
 				"firefox",
 				firefox_table,
@@ -898,7 +876,6 @@ func getDBPaths() []browserDB {
 					filepath.Join(home, ".mozilla", "firefox", "*.dev-edition-default*", "places.sqlite"),
 				},
 			},
-
 			{
 				"Zen",
 				firefox_table,
@@ -907,7 +884,6 @@ func getDBPaths() []browserDB {
 					filepath.Join(home, ".config", "zen", "*.Default*", "places.sqlite"),
 				},
 			},
-
 			{
 				"Waterfox",
 				firefox_table,
@@ -915,7 +891,6 @@ func getDBPaths() []browserDB {
 					filepath.Join(home, ".waterfox", "Profiles", "*.default*", "places.sqlite"),
 				},
 			},
-
 			{
 				"Chrome",
 				chromium_table,
@@ -924,7 +899,6 @@ func getDBPaths() []browserDB {
 					filepath.Join(home, ".config", "google-chrome-beta", "Default", "History"),
 				},
 			},
-
 			{
 				"Chromium",
 				chromium_table,
@@ -933,7 +907,6 @@ func getDBPaths() []browserDB {
 					filepath.Join(home, "snap", "chromium", "common", "chromium", "Default", "History"),
 				},
 			},
-
 			{
 				"Brave",
 				chromium_table,
@@ -941,7 +914,6 @@ func getDBPaths() []browserDB {
 					filepath.Join(home, ".config", "BraveSoftware", "Brave-Browser", "Default", "History"),
 				},
 			},
-
 			{
 				"Edge",
 				chromium_table,
@@ -950,7 +922,6 @@ func getDBPaths() []browserDB {
 					filepath.Join(home, ".config", "microsoft-edge-beta", "Default", "History"),
 				},
 			},
-
 			{
 				"Vivaldi",
 				chromium_table,
@@ -958,7 +929,6 @@ func getDBPaths() []browserDB {
 					filepath.Join(home, ".config", "vivaldi", "Default", "History"),
 				},
 			},
-
 			{
 				"Opera",
 				chromium_table,
@@ -987,9 +957,7 @@ func getDBPaths() []browserDB {
 		}
 		paths = []string{}
 	}
-
 	return dbFiles
-
 }
 
 func newClient() *client.Client {
