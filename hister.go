@@ -550,7 +550,13 @@ func indexURL(u string) error {
 func importHistory(cmd *cobra.Command, args []string) {
 	// TODO: get skip rules from server
 
-	browser := args[0]
+	var browser string
+	if len(args) == 0 {
+		browser = ""
+	} else {
+		browser = args[0]
+	}
+
 	var foundDBs []browserDB
 	var table string
 	var dbFiles []string
