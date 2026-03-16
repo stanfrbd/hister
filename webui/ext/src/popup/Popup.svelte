@@ -172,17 +172,6 @@
         </form>
       </Card.Content>
     </Card.Root>
-
-    <!-- Status message -->
-    {#if message}
-      <div
-        class="font-inter mx-5 my-4 border-l-[4px] px-4 py-3 text-sm {messageType === 'success'
-          ? 'border-l-hister-teal bg-hister-teal/10 text-hister-teal'
-          : 'border-l-hister-rose bg-hister-rose/10 text-hister-rose'}"
-      >
-        {message}
-      </div>
-    {/if}
   {:else}
     <!-- Main View -->
     <!-- Automatic Indexing Toggle -->
@@ -205,16 +194,15 @@
         Reindex Page
       </Button>
     </div>
-
-    <!-- Status message -->
-    {#if message}
-      <div
-        class="font-inter mx-5 my-4 border-l-[4px] px-4 py-3 text-sm {messageType === 'success'
-          ? 'border-l-hister-teal bg-hister-teal/10 text-hister-teal'
-          : 'border-l-hister-rose bg-hister-rose/10 text-hister-rose'}"
-      >
-        {message}
-      </div>
-    {/if}
+  {/if}
+  <!-- Status message -->
+  {#if message}
+    <div
+      class="font-inter mx-5 my-4 border-l-[4px] px-4 py-3 text-sm {messageType === 'success'
+        ? 'border-l-hister-teal bg-hister-teal/10 text-hister-teal'
+        : 'border-l-hister-rose bg-hister-rose/10 text-hister-rose'}"
+    >
+      {message}
+    </div>
   {/if}
 </main>
