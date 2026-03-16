@@ -5,6 +5,7 @@
   import * as Card from '@hister/components/ui/card';
   import SettingsInput from '../options/SettingsInput.svelte';
   import { Settings } from 'lucide-svelte';
+  import { slide } from 'svelte/transition';
 
   const defaultURL = 'http://127.0.0.1:4433/';
 
@@ -15,6 +16,21 @@
   let message = $state('');
   let messageType: 'success' | 'error' = $state('success');
   let showSettings = $state(false);
+  let messageKey = $state(0); // used to reappear message every time it is updated
+
+  function setMessage(mType, msg) {
+    message = msg;
+    messageType = mType;
+    messageKey++;
+  }
+
+  function setErrorMessage(msg) {
+    setMessage('error', msg);
+  }
+
+  function setSuccessMessage(msg) {
+    setMessage('success', msg);
+  }
 
   chrome.storage.local.get(['histerURL', 'histerToken', 'indexingEnabled'], (data) => {
     if (!data['histerURL']) {
@@ -29,8 +45,7 @@
       if (!tabs?.length) return;
       chrome.action.getBadgeText({ tabId: tabs[0].id! }, (badgeText) => {
         if (badgeText === '!') {
-          message = 'Failed to send page data to server';
-          messageType = 'error';
+          setErrorMessage('Failed to send page data to server');
         }
       });
     });
@@ -53,20 +68,17 @@
       .then((response) => {
         if (response.status !== 200) {
           if (response.status == 403) {
-            message = 'Error: Invalid access token';
-            messageType = 'error';
+            setErrorMessage('Invalid access token');
             return;
           }
-          message = `Error: Server returned status ${response.status}`;
-          messageType = 'error';
+          setErrorMessage(`Server returned status ${response.status}`);
           return;
         }
         return response
           .json()
           .then(() => {
             chrome.storage.local.set({ histerURL: url, histerToken: token }).then(() => {
-              message = 'Settings saved';
-              messageType = 'success';
+              setSuccessMessage('Settings saved');
               showTokenInput = !token;
 
               chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
@@ -77,13 +89,11 @@
             });
           })
           .catch(() => {
-            message = 'Error: Server response is not valid JSON - probably invalid server URL.';
-            messageType = 'error';
+            setErrorMessage('Server response is not valid JSON - probably invalid server URL.');
           });
       })
       .catch((err) => {
-        message = `Error: ${err.message}`;
-        messageType = 'error';
+        setErrorMessage(err.message);
       });
   }
 
@@ -93,7 +103,6 @@
 
   function toggleIndexing() {
     chrome.storage.local.set({ indexingEnabled: indexingEnabled });
-    console.log('yo', indexingEnabled);
   }
 
   function reindex() {
@@ -101,18 +110,17 @@
       if (!tabs?.length) return;
       chrome.tabs.sendMessage(tabs[0].id!, { action: 'reindex' }, (r) => {
         if (r?.status === 'ok' && r.status_code === 201) {
-          message = 'Reindex successful';
-          messageType = 'success';
+          setSuccessMessage('Reindex successful');
           return;
         }
-        message = 'Reindex failed';
-        messageType = 'error';
+        let msg = 'Reindex failed';
         if (r?.error) {
-          message += ': ' + r.error;
+          msg += ': ' + r.error;
         }
         if (r?.status_code === 403) {
-          message += ': Unauthorized - invalid access token';
+          msg += ': Unauthorized - invalid access token';
         }
+        setErrorMessage(msg);
       });
     });
   }
@@ -197,12 +205,15 @@
   {/if}
   <!-- Status message -->
   {#if message}
-    <div
-      class="font-inter mx-5 my-4 border-l-[4px] px-4 py-3 text-sm {messageType === 'success'
-        ? 'border-l-hister-teal bg-hister-teal/10 text-hister-teal'
-        : 'border-l-hister-rose bg-hister-rose/10 text-hister-rose'}"
-    >
-      {message}
-    </div>
+    {#key messageKey}
+      <div
+        transition:slide
+        class="font-inter mx-5 my-4 border-l-[4px] px-4 py-3 text-sm {messageType === 'success'
+          ? 'border-l-hister-teal bg-hister-teal/10 text-hister-teal'
+          : 'border-l-hister-rose bg-hister-rose/10 text-hister-rose'}"
+      >
+        {message}
+      </div>
+    {/key}
   {/if}
 </main>
