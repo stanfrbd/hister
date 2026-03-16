@@ -62,19 +62,17 @@
         return response
           .json()
           .then(() => {
-            chrome.storage.local
-              .set({ histerURL: url, histerToken: token, indexingEnabled: indexingEnabled })
-              .then(() => {
-                message = 'Settings saved';
-                messageType = 'success';
-                showTokenInput = !token;
+            chrome.storage.local.set({ histerURL: url, histerToken: token }).then(() => {
+              message = 'Settings saved';
+              messageType = 'success';
+              showTokenInput = !token;
 
-                chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-                  if (tabs?.length) {
-                    chrome.action.setBadgeText({ text: '', tabId: tabs[0].id! });
-                  }
-                });
+              chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+                if (tabs?.length) {
+                  chrome.action.setBadgeText({ text: '', tabId: tabs[0].id! });
+                }
               });
+            });
           })
           .catch(() => {
             message = 'Error: Server response is not valid JSON - probably invalid server URL.';
@@ -89,6 +87,11 @@
 
   function changeToken() {
     showTokenInput = true;
+  }
+
+  function toggleIndexing() {
+    chrome.storage.local.set({ indexingEnabled: indexingEnabled });
+    console.log('yo', indexingEnabled);
   }
 
   function reindex() {
@@ -143,16 +146,6 @@
           </div>
         {/if}
 
-        <div class="flex items-center justify-between pt-1">
-          <Label
-            for="indexing"
-            class="font-outfit text-text-brand cursor-pointer text-xs font-bold"
-          >
-            Automatic indexing
-          </Label>
-          <Switch id="indexing" bind:checked={indexingEnabled} />
-        </div>
-
         <Button
           type="submit"
           class="bg-hister-coral border-brutal-border font-outfit h-9 w-full border-[3px] text-sm font-bold tracking-wide text-white shadow-[3px_3px_0_var(--brutal-shadow)] transition-all hover:translate-x-px hover:translate-y-px hover:shadow-[1px_1px_0_var(--brutal-shadow)]"
@@ -162,6 +155,16 @@
       </form>
     </Card.Content>
   </Card.Root>
+
+  <!-- Automatic Indexing Toggle -->
+  <div class="border-brutal-border border-b-[3px] px-5 py-4">
+    <div class="flex items-center justify-between">
+      <Label for="indexing" class="font-outfit text-text-brand cursor-pointer text-sm font-bold">
+        Automatic indexing
+      </Label>
+      <Switch id="indexing" bind:checked={indexingEnabled} onCheckedChange={toggleIndexing} />
+    </div>
+  </div>
 
   <!-- Reindex section -->
   <div class="border-brutal-border border-b-[3px] px-5 py-4">
