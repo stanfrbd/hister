@@ -128,14 +128,14 @@ func init() {
 			Method:       GET,
 			CSRFRequired: true,
 			Handler:      serveHistory,
-			Description:  "History page",
+			Description:  "Display latest indexed websites",
 		},
 		{
 			Name:         "Add history item",
 			Path:         "/api/history",
 			Method:       POST,
 			CSRFRequired: true,
-			Handler:      serveHistory,
+			Handler:      serveSaveHistory,
 			Description:  "Add new history item",
 		},
 		{

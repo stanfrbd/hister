@@ -600,20 +600,15 @@ func serveAdd(c *webContext) {
 }
 
 func serveHistory(c *webContext) {
-	m := c.Request.Method
-	if m == http.MethodGet {
-		hs, err := model.GetLatestHistoryItems(40)
-		if err != nil {
-			serve500(c)
-			return
-		}
-		c.JSON(hs)
-		return
-	}
-	if m != http.MethodPost {
+	hs, err := model.GetLatestHistoryItems(40)
+	if err != nil {
 		serve500(c)
 		return
 	}
+	c.JSON(hs)
+}
+
+func serveSaveHistory(c *webContext) {
 	h := &historyItem{}
 	err := json.NewDecoder(c.Request.Body).Decode(h)
 	if err != nil {
