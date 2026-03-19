@@ -149,7 +149,13 @@ func (d *Document) processFile(ld LanguageDetector, pu *url.URL) error {
 	}
 	d.Type = types.Local
 	d.Domain = "local"
-	d.Title = filepath.Base(pu.Path)
+	base := filepath.Base(pu.Path)
+	parent := filepath.Base(filepath.Dir(pu.Path))
+	if parent == "." || parent == "/" {
+		d.Title = base
+	} else {
+		d.Title = parent + "/" + base
+	}
 	if d.Added == 0 {
 		d.Added = time.Now().Unix()
 	}

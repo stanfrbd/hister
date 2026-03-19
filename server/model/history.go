@@ -54,6 +54,9 @@ func GetOrCreateLink(u, title string) *Link {
 		if err := DB.Create(ret).Error; err != nil {
 			return nil
 		}
+	} else if ret.Title != title && title != "" {
+		ret.Title = title
+		DB.Save(ret)
 	}
 	return ret
 }
