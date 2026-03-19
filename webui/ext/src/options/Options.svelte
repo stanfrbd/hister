@@ -36,7 +36,11 @@
     e.preventDefault();
     const headersToSave = customHeaders.filter((h) => h.name.trim() !== '');
     chrome.storage.local
-      .set({ histerURL: url, histerToken: token, histerCustomHeaders: $state.snapshot(headersToSave) })
+      .set({
+        histerURL: url,
+        histerToken: token,
+        histerCustomHeaders: $state.snapshot(headersToSave),
+      })
       .then(() => {
         customHeaders = headersToSave;
         message = 'Settings saved';

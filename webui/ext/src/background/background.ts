@@ -21,7 +21,9 @@ function cjsMsgHandler(request, sender, sendResponse) {
       let u = data['histerURL'] || '';
       const tok = data['histerToken'] || '';
       const indexingEnabled = data['indexingEnabled'] !== false;
-      const customHeaders = Array.isArray(data['histerCustomHeaders']) ? data['histerCustomHeaders'] : [];
+      const customHeaders = Array.isArray(data['histerCustomHeaders'])
+        ? data['histerCustomHeaders']
+        : [];
 
       if (!u) {
         chrome.tabs.sendMessage(sender.tab.id, missingURLMsg);

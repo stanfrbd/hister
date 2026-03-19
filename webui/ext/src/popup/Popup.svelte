@@ -89,7 +89,11 @@
           .json()
           .then(() => {
             chrome.storage.local
-              .set({ histerURL: url, histerToken: token, histerCustomHeaders: $state.snapshot(customHeaders) })
+              .set({
+                histerURL: url,
+                histerToken: token,
+                histerCustomHeaders: $state.snapshot(customHeaders),
+              })
               .then(() => {
                 setSuccessMessage('Settings saved');
                 showTokenInput = !token;
