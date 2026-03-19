@@ -11,6 +11,7 @@
 
   let url = $state(defaultURL);
   let token = $state('');
+  let customHeaders: { name: string; value: string }[] = $state([]);
   let indexingEnabled = $state(true);
   let showTokenInput = $state(false);
   let message = $state('');
@@ -32,24 +33,28 @@
     setMessage('success', msg);
   }
 
-  chrome.storage.local.get(['histerURL', 'histerToken', 'indexingEnabled'], (data) => {
-    if (!data['histerURL']) {
-      chrome.storage.local.set({ histerURL: defaultURL });
-    }
-    url = data['histerURL'] || defaultURL;
-    token = data['histerToken'] || '';
-    indexingEnabled = data['indexingEnabled'] !== false;
-    showTokenInput = !token;
+  chrome.storage.local.get(
+    ['histerURL', 'histerToken', 'histerCustomHeaders', 'indexingEnabled'],
+    (data) => {
+      if (!data['histerURL']) {
+        chrome.storage.local.set({ histerURL: defaultURL });
+      }
+      url = data['histerURL'] || defaultURL;
+      token = data['histerToken'] || '';
+      customHeaders = data['histerCustomHeaders'] || [];
+      indexingEnabled = data['indexingEnabled'] !== false;
+      showTokenInput = !token;
 
-    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-      if (!tabs?.length) return;
-      chrome.action.getBadgeText({ tabId: tabs[0].id! }, (badgeText) => {
-        if (badgeText === '!') {
-          setErrorMessage('Failed to send page data to server');
-        }
+      chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+        if (!tabs?.length) return;
+        chrome.action.getBadgeText({ tabId: tabs[0].id! }, (badgeText) => {
+          if (badgeText === '!') {
+            setErrorMessage('Failed to send page data to server');
+          }
+        });
       });
-    });
-  });
+    },
+  );
 
   function save(e: Event) {
     e.preventDefault();
@@ -62,6 +67,11 @@
     const headers: HeadersInit = {};
     if (token) {
       headers['X-Access-Token'] = token;
+    }
+    for (const h of customHeaders) {
+      if (h.name) {
+        headers[h.name] = h.value || '';
+      }
     }
 
     fetch(verifyURL + 'api/config', { headers })
@@ -77,16 +87,18 @@
         return response
           .json()
           .then(() => {
-            chrome.storage.local.set({ histerURL: url, histerToken: token }).then(() => {
-              setSuccessMessage('Settings saved');
-              showTokenInput = !token;
+            chrome.storage.local
+              .set({ histerURL: url, histerToken: token, histerCustomHeaders: customHeaders })
+              .then(() => {
+                setSuccessMessage('Settings saved');
+                showTokenInput = !token;
 
-              chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-                if (tabs?.length) {
-                  chrome.action.setBadgeText({ text: '', tabId: tabs[0].id! });
-                }
+                chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+                  if (tabs?.length) {
+                    chrome.action.setBadgeText({ text: '', tabId: tabs[0].id! });
+                  }
+                });
               });
-            });
           })
           .catch(() => {
             setErrorMessage('Server response is not valid JSON - probably invalid server URL.');

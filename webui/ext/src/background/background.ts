@@ -16,11 +16,12 @@ function clearErrorBadge(tabId: number) {
 // TODO check source
 function cjsMsgHandler(request, sender, sendResponse) {
   chrome.storage.local
-    .get(['histerURL', 'histerToken', 'indexingEnabled'])
+    .get(['histerURL', 'histerToken', 'indexingEnabled', 'histerCustomHeaders'])
     .then((data) => {
       let u = data['histerURL'] || '';
       const tok = data['histerToken'] || '';
       const indexingEnabled = data['indexingEnabled'] !== false;
+      const customHeaders = data['histerCustomHeaders'] || [];
 
       if (!u) {
         chrome.tabs.sendMessage(sender.tab.id, missingURLMsg);
@@ -35,7 +36,7 @@ function cjsMsgHandler(request, sender, sendResponse) {
           sendResponse({ status: 'disabled' });
           return;
         }
-        sendPageData(u + 'api/add', request.pageData, tok)
+        sendPageData(u + 'api/add', request.pageData, tok, customHeaders)
           .then((r) => {
             if (r.status === 201) {
               clearErrorBadge(sender.tab.id);
@@ -51,7 +52,7 @@ function cjsMsgHandler(request, sender, sendResponse) {
         return true;
       }
       if (request.resultData) {
-        sendResult(u + 'api/history', request.resultData, tok)
+        sendResult(u + 'api/history', request.resultData, tok, customHeaders)
           .then((r) => {
             if (r.status === 201) {
               clearErrorBadge(sender.tab.id);

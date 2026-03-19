@@ -14,23 +14,29 @@ async function fetchFavicon(url) {
   });
 }
 
-async function sendPageData(url, doc, tok) {
+async function sendPageData(url, doc, tok, customHeaders = []) {
   try {
     doc['favicon'] = await fetchFavicon(doc.faviconURL);
   } catch (e) {
     doc['favicon'] = '';
   }
-  return sendResult(url, doc, tok);
+  return sendResult(url, doc, tok, customHeaders);
 }
 
-async function sendResult(url, res, tok) {
+async function sendResult(url, res, tok, customHeaders = []) {
+  const headers: Record<string, string> = {
+    'Content-type': 'application/json; charset=UTF-8',
+    'X-Access-Token': tok,
+  };
+  for (const h of customHeaders) {
+    if (h.name) {
+      headers[h.name] = h.value || '';
+    }
+  }
   return fetch(url, {
     method: 'POST',
     body: JSON.stringify(res),
-    headers: {
-      'Content-type': 'application/json; charset=UTF-8',
-      'X-Access-Token': tok,
-    },
+    headers,
   });
 }
 

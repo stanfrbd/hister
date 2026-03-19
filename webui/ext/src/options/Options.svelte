@@ -1,29 +1,46 @@
 <script lang="ts">
   import { Button } from '@hister/components/ui/button';
+  import { Input } from '@hister/components/ui/input';
+  import { Label } from '@hister/components/ui/label';
   import * as Card from '@hister/components/ui/card';
   import SettingsInput from './SettingsInput.svelte';
+  import { Plus, Trash2 } from 'lucide-svelte';
 
   const defaultURL = 'http://127.0.0.1:4433/';
 
   let url = $state(defaultURL);
   let token = $state('');
+  let customHeaders: { name: string; value: string }[] = $state([]);
   let message = $state('');
   let messageType: 'success' | 'error' = $state('success');
 
-  chrome.storage.local.get(['histerURL', 'histerToken'], (data) => {
+  chrome.storage.local.get(['histerURL', 'histerToken', 'histerCustomHeaders'], (data) => {
     if (!data['histerURL']) {
       chrome.storage.local.set({ histerURL: defaultURL });
     }
     url = data['histerURL'] || defaultURL;
     token = data['histerToken'] || '';
+    customHeaders = data['histerCustomHeaders'] || [];
   });
+
+  function addHeader() {
+    customHeaders.push({ name: '', value: '' });
+  }
+
+  function removeHeader(index: number) {
+    customHeaders.splice(index, 1);
+  }
 
   function save(e: Event) {
     e.preventDefault();
-    chrome.storage.local.set({ histerURL: url, histerToken: token }).then(() => {
-      message = 'Settings saved';
-      messageType = 'success';
-    });
+    const headersToSave = customHeaders.filter((h) => h.name.trim() !== '');
+    chrome.storage.local
+      .set({ histerURL: url, histerToken: token, histerCustomHeaders: headersToSave })
+      .then(() => {
+        customHeaders = headersToSave;
+        message = 'Settings saved';
+        messageType = 'success';
+      });
   }
 </script>
 
@@ -74,6 +91,48 @@
             placeholder="Token..."
             description="If your server requires authentication, enter your access token here."
           />
+
+          <!-- Custom Headers -->
+          <div class="space-y-3">
+            <div>
+              <Label class="font-outfit text-text-brand text-sm font-bold">Custom Headers</Label>
+              <p class="text-text-brand-muted font-inter mt-1 text-xs">
+                Add custom HTTP headers sent with every request. Useful for reverse proxy
+                authentication.
+              </p>
+            </div>
+            {#each customHeaders as header, i}
+              <div class="flex items-center gap-2">
+                <Input
+                  bind:value={header.name}
+                  placeholder="Header name"
+                  class="bg-page-bg border-hister-indigo font-fira text-text-brand placeholder:text-text-brand-muted focus-visible:border-hister-coral h-10 border-[3px] px-3 text-sm shadow-none transition-colors focus-visible:ring-0"
+                />
+                <Input
+                  bind:value={header.value}
+                  placeholder="Header value"
+                  class="bg-page-bg border-hister-indigo font-fira text-text-brand placeholder:text-text-brand-muted focus-visible:border-hister-coral h-10 border-[3px] px-3 text-sm shadow-none transition-colors focus-visible:ring-0"
+                />
+                <button
+                  type="button"
+                  onclick={() => removeHeader(i)}
+                  class="text-text-brand-muted hover:text-hister-rose h-10 shrink-0 cursor-pointer border-0 bg-transparent p-2 transition-colors"
+                  aria-label="Remove header"
+                >
+                  <Trash2 size={16} />
+                </button>
+              </div>
+            {/each}
+            <Button
+              type="button"
+              variant="outline"
+              onclick={addHeader}
+              class="border-brutal-border font-outfit hover:border-hister-indigo h-9 border-[3px] text-sm font-bold tracking-wide transition-all"
+            >
+              <Plus size={16} class="mr-1" />
+              Add Header
+            </Button>
+          </div>
 
           <Button
             type="submit"

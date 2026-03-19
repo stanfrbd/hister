@@ -13,7 +13,6 @@ Bleve is a file-based indexer that can handle millions of records. It supports c
 
 [Hister](https://github.com/asciimoo/hister) is built on top of Bleve and uses a wide range of its features: custom field mappings with language-specific analyzers, a hand-crafted query language with per-field boosting, cursor-based pagination, multi-language index aliases, and fine-grained Scorch tuning. The examples through this post are inspired from our codebase and the knowledge we collected during the development.
 
-
 ## Creating a Simple Indexer
 
 Getting started with Bleve only takes a few lines of code. The two core operations are **indexing** (storing a document so it can be searched later) and **querying** (retrieving ranked documents that match a search expression).
@@ -83,22 +82,22 @@ func main() {
 A few things to note:
 
 - **`bleve.New` vs `bleve.Open`** `New` creates a fresh index at the given path; `Open` opens an existing one. The pattern shown above. Try `New`, fall back to `Open` on error is the idiomatic way to handle both the first run and subsequent runs with the same index directory.
-- **`bleve.NewIndexMapping()`** Returns a default mapping that works well out of the box: text fields are tokenized, lowercased, and stop-word filtered using the English analyzer. You can replace this with a custom mapping when you need more control (see the *Mappings* section below).
+- **`bleve.NewIndexMapping()`** Returns a default mapping that works well out of the box: text fields are tokenized, lowercased, and stop-word filtered using the English analyzer. You can replace this with a custom mapping when you need more control (see the _Mappings_ section below).
 - **Automatic field discovery** Bleve uses reflection to inspect your struct. Every exported field is automatically tokenized and made searchable with no extra configuration. Unexported fields are silently skipped.
 - **Unique document IDs** The string ID you pass to `Index` is how you identify documents for updates and deletes. Calling `Index` with an ID that already exists replaces the previous document in place, making it safe to re-index pages that have changed.
 - **`SearchRequest.Fields`** By default Bleve returns only document IDs and relevance scores to keep responses lean. Specify the field names you want returned in `Fields`, or pass `[]string{"*"}` to get every stored field.
-- **`hit.Score`** Each result carries a floating-point relevance score computed by Bleve's BM25-based scorer. Higher scores indicate a stronger match. You can influence scores with boost values (covered in the *Querying* section).
-
+- **`hit.Score`** Each result carries a floating-point relevance score computed by Bleve's BM25-based scorer. Higher scores indicate a stronger match. You can influence scores with boost values (covered in the _Querying_ section).
 
 ## Mappings
 
 The default mapping works well for a quick start, but real applications usually need more control over how Bleve analyzes and stores each field. A **mapping** tells Bleve what type each field is, which analyzer to use when tokenizing it, whether to store the original value, and whether to include it in the index at all.
 
 Mappings can:
- - **Control tokenization** split text into terms using whitespace, language rules, edge n-grams, etc.
- - **Filter input data** lowercase terms, strip HTML, apply stop-word lists, or run a stemmer so that "running" and "runs" match the same root token
- - **Exclude fields from the index** omit sensitive or irrelevant fields to save disk space and keep the index lean
- - **Define custom analyzers** combine any tokenizer with any chain of token filters to get exactly the behavior you need
+
+- **Control tokenization** split text into terms using whitespace, language rules, edge n-grams, etc.
+- **Filter input data** lowercase terms, strip HTML, apply stop-word lists, or run a stemmer so that "running" and "runs" match the same root token
+- **Exclude fields from the index** omit sensitive or irrelevant fields to save disk space and keep the index lean
+- **Define custom analyzers** combine any tokenizer with any chain of token filters to get exactly the behavior you need
 
 Here is a concrete example that applies language-based stemming to the `Text` and `Title` fields, and excludes a raw HTML field from being indexed at all:
 
@@ -138,7 +137,6 @@ func buildIndexMapping() *mapping.IndexMappingImpl {
 ```
 
 Pass the result of `buildIndexMapping()` to `bleve.New` or `bleve.NewUsing` when creating the index. Mappings are baked into the index at creation time and cannot be changed afterwards. To apply a new mapping you need to create a fresh index and re-index all documents.
-
 
 ## Querying
 
@@ -211,16 +209,15 @@ fullQuery := query.NewBooleanQuery(
 )
 ```
 
-Each keyword in the input string becomes its own `DisjunctionQuery` that spans all three fields. The `BooleanQuery` then requires that *all* keyword disjunctions are satisfied, giving us an implicit AND between keywords and a per-field OR within each keyword. Negated keywords (prefixed with `-`) are placed in the `mustNot` list and disqualify any document that matches them.
+Each keyword in the input string becomes its own `DisjunctionQuery` that spans all three fields. The `BooleanQuery` then requires that _all_ keyword disjunctions are satisfied, giving us an implicit AND between keywords and a per-field OR within each keyword. Negated keywords (prefixed with `-`) are placed in the `mustNot` list and disqualify any document that matches them.
 
 This structure is easy to extend: you could add date-range filters, weight fields dynamically based on user preferences, or introduce special syntax for field-scoped searches.
 
 Take a look at our [query builder](https://github.com/asciimoo/hister/blob/master/server/indexer/querybuilder/builder.go) for a more complete real-world example.
 
-
 ## Paging
 
-Bleve's [SearchRequest](https://pkg.go.dev/github.com/blevesearch/bleve/v2#SearchRequest) controls both the page size (`Size`) and the starting offset of results. A natural first instinct is to use the `From` field, set it to `0` for the first page, `20` for the second, and so on. This works, but it has a serious problem: Bleve must score and sort *all* matching documents up to `From + Size` on every request, making deep pages increasingly expensive in both memory and CPU. Worse, if new documents are indexed between two page requests, the offset shifts and users see duplicate or missing results.
+Bleve's [SearchRequest](https://pkg.go.dev/github.com/blevesearch/bleve/v2#SearchRequest) controls both the page size (`Size`) and the starting offset of results. A natural first instinct is to use the `From` field, set it to `0` for the first page, `20` for the second, and so on. This works, but it has a serious problem: Bleve must score and sort _all_ matching documents up to `From + Size` on every request, making deep pages increasingly expensive in both memory and CPU. Worse, if new documents are indexed between two page requests, the offset shifts and users see duplicate or missing results.
 
 The correct approach is to use cursor-based pagination via [SearchAfter](https://pkg.go.dev/github.com/blevesearch/bleve/v2#SearchRequest.SetSearchAfter) and [SearchBefore](https://pkg.go.dev/github.com/blevesearch/bleve/v2#SearchRequest.SetSearchBefore). These functions resume the result stream from a known position rather than re-scanning from the beginning, which is both accurate and efficient. We learned to prefer them the [hard way](https://github.com/asciimoo/hister/issues/173).
 
@@ -277,7 +274,6 @@ results, _ := alias.Search(req)
 
 Aliases also make hot-swapping painless. When you need to rebuild an index (for example, to apply a new mapping), you can build the new index in the background, then atomically swap it into the alias with `alias.Swap(newIndexes, oldIndexes)`. In-flight queries complete against the old index while new queries immediately use the new one, with zero downtime.
 
-
 ## Fine-tuning
 
 Bleve's performance knobs are not prominently documented, but they make a real difference under load. Configuration is passed as a `map[string]any` to [NewUsing](https://pkg.go.dev/github.com/blevesearch/bleve/v2#NewUsing) or [OpenUsing](https://pkg.go.dev/github.com/blevesearch/bleve/v2#OpenUsing) instead of the regular `New`/`Open` functions.
@@ -318,7 +314,6 @@ index, err := bleve.OpenUsing("my.bleve", config)
 ```
 
 These settings live in the Scorch storage backend, which is Bleve's default. Consult the [persister source](https://github.com/blevesearch/bleve/blob/master/index/scorch/persister.go#L67) for the full list of available options and their default values.
-
 
 ## Conclusion
 
