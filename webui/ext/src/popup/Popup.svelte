@@ -4,8 +4,9 @@
   import { Switch } from '@hister/components/ui/switch';
   import * as Card from '@hister/components/ui/card';
   import SettingsInput from '../options/SettingsInput.svelte';
-  import { Settings } from 'lucide-svelte';
+  import { Settings, Sun, Moon } from 'lucide-svelte';
   import { slide } from 'svelte/transition';
+  import { ModeWatcher, toggleMode, mode } from 'mode-watcher';
 
   const defaultURL = 'http://127.0.0.1:4433/';
 
@@ -144,19 +145,23 @@
   }
 </script>
 
+<ModeWatcher />
+
 <main class="w-80">
   <!-- Header bar -->
   <div
     class="bg-hister-indigo/90 border-brutal-border flex items-center justify-between border-b-[3px] px-5 py-3"
   >
     <span class="font-outfit text-lg font-black tracking-widest text-white uppercase">Hister</span>
-    <button
-      onclick={toggleSettings}
-      class="hover:text-hister-coral cursor-pointer border-0 bg-transparent p-0 text-white transition-colors"
-      aria-label="Settings"
-    >
-      <Settings size={20} />
-    </button>
+    <div class="flex items-center gap-2">
+      <button
+        onclick={toggleSettings}
+        class="hover:text-hister-coral cursor-pointer border-0 bg-transparent p-0 text-white transition-colors"
+        aria-label="Settings"
+      >
+        <Settings size={20} />
+      </button>
+    </div>
   </div>
 
   {#if showSettings}
@@ -190,6 +195,23 @@
           >
             Save
           </Button>
+
+          <div class="flex items-center justify-between">
+            <Label class="font-outfit text-text-brand text-sm font-bold">Theme</Label>
+            <button
+              onclick={toggleMode}
+              class="border-brutal-border hover:border-hister-indigo flex cursor-pointer items-center gap-2 rounded border-[3px] bg-transparent px-3 py-1.5 transition-all"
+              aria-label="Toggle theme"
+            >
+              {#if mode.current === 'light'}
+                <Sun size={16} />
+                <span class="font-outfit text-text-brand text-sm font-bold">Light</span>
+              {:else}
+                <Moon size={16} />
+                <span class="font-outfit text-text-brand text-sm font-bold">Dark</span>
+              {/if}
+            </button>
+          </div>
         </form>
       </Card.Content>
     </Card.Root>

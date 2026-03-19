@@ -4,7 +4,8 @@
   import { Label } from '@hister/components/ui/label';
   import * as Card from '@hister/components/ui/card';
   import SettingsInput from './SettingsInput.svelte';
-  import { Plus, Trash2 } from 'lucide-svelte';
+  import { Plus, Trash2, Sun, Moon } from 'lucide-svelte';
+  import { ModeWatcher, toggleMode, mode } from 'mode-watcher';
 
   const defaultURL = 'http://127.0.0.1:4433/';
 
@@ -44,12 +45,27 @@
   }
 </script>
 
+<ModeWatcher />
+
 <div class="bg-page-bg min-h-screen">
   <!-- Page header -->
-  <div class="bg-brutal-bg border-brutal-border border-b-[3px] px-8 py-5">
+  <div
+    class="bg-brutal-bg border-brutal-border flex items-center justify-between border-b-[3px] px-8 py-5"
+  >
     <span class="font-outfit text-text-brand-muted text-sm font-bold tracking-widest uppercase">
       Hister <span class="mx-1">/</span> Options
     </span>
+    <button
+      onclick={toggleMode}
+      class="text-text-brand-muted hover:text-hister-coral cursor-pointer border-0 bg-transparent p-0 transition-colors"
+      aria-label="Toggle theme"
+    >
+      {#if mode.current === 'light'}
+        <Moon size={18} />
+      {:else}
+        <Sun size={18} />
+      {/if}
+    </button>
   </div>
 
   <div class="mx-auto max-w-2xl space-y-8 px-8 py-10">
