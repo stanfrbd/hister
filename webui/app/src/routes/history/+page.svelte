@@ -1,5 +1,6 @@
 <script lang="ts">
   import { fetchConfig, apiFetch } from '$lib/api';
+  import { formatTimestamp, formatRelativeTime } from '$lib/search';
   import type { HistoryItem } from '$lib/types';
   import { Button } from '@hister/components/ui/button';
   import { Input } from '@hister/components/ui/input';
@@ -403,10 +404,18 @@
                     >
                       {(item.title || item.url).replace(/<[^>]*>/g, '')}
                     </a>
-                    <span
-                      class="font-fira text-text-brand-muted block truncate text-xs md:text-sm"
-                      title={item.url}>{item.url}</span
-                    >
+                    <div class="items-left flex flex-col gap-0 md:flex-row md:items-center md:gap-2">
+                      {#if item.added}
+                        <span
+                          class="font-inter text-text-brand-muted text-xs whitespace-nowrap md:text-sm"
+                          title={formatTimestamp(item.added)}>{formatRelativeTime(item.added)} ·</span
+                        >
+                      {/if}
+                      <span
+                        class="font-fira text-text-brand-muted block truncate text-xs md:text-sm"
+                        title={item.url}>{item.url}</span
+                      >
+                    </div>
                   </div>
                   <nav class="flex shrink-0 items-center gap-1">
                     <Button
