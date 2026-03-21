@@ -270,6 +270,13 @@ var deleteCmd = &cobra.Command{
 				log.Warn().Msg("URL must not be empty")
 				continue
 			}
+			if !strings.Contains(u, "://") {
+				absPath, err := filepath.Abs(u)
+				if err != nil {
+					exit(1, "Failed to resolve path: "+err.Error())
+				}
+				u = "file://" + absPath
+			}
 			if err := c.DeleteDocument(u); err != nil {
 				exit(1, "Failed to delete URL: "+err.Error())
 			}

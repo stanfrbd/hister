@@ -924,6 +924,9 @@ func serveDeleteDocument(c *webContext) {
 		return
 	}
 	u := c.Request.PostForm.Get("url")
+	if fp, err := url.QueryUnescape(strings.TrimPrefix(u, c.Config.BaseURL("/api/file?path="))); err == nil && fp != u {
+		u = "file://" + fp
+	}
 	if err := indexer.Delete(u); err != nil {
 		log.Error().Err(err).Str("URL", u).Msg("failed to delete URL")
 	}
