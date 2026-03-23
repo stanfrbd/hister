@@ -137,7 +137,9 @@ func (d *Document) processFile(ld LanguageDetector, pu *url.URL) error {
 	if d.Text == "" {
 		content, err := os.ReadFile(pu.Path)
 		if err != nil {
-			return fmt.Errorf("cannot read file: %w", err)
+			return &ReadFileError{
+				Msg: err.Error(),
+			}
 		}
 		if !utf8.Valid(content) {
 			return errors.New("binary file")

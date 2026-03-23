@@ -221,6 +221,9 @@ func Reindex(basePath string, rules *config.Rules, skipSensitiveChecks bool, det
 				} else if errors.Is(err, ErrNoExtractor) {
 					log.Warn().Err(err).Str("URL", d.URL).Msg("Skipping document, can't extract content")
 					continue
+				} else if errors.Is(err, ErrReadFile) {
+					log.Warn().Err(err).Str("Path", d.URL).Msg("Skipping document, can't read file")
+					continue
 				} else {
 					tmpIdx.Close()
 					if rerr := os.RemoveAll(tmpBasePath); rerr != nil {
