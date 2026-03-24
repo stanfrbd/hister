@@ -231,7 +231,7 @@ func init() {
 			Name:         "Login",
 			Path:         "/api/login",
 			Method:       POST,
-			CSRFRequired: false,
+			CSRFRequired: true,
 			NoAuth:       true,
 			Handler:      serveLogin,
 			Description:  "Login with username and password",
