@@ -34,6 +34,7 @@ type Endpoint struct {
 	Method       string
 	CSRFRequired bool
 	NoAuth       bool
+	AdminOnly    bool
 	Handler      endpointHandler `json:"-"`
 	Description  string
 	Args         []*EndpointArg
@@ -212,6 +213,7 @@ func init() {
 			Path:         "/api/reindex",
 			Method:       POST,
 			CSRFRequired: true,
+			AdminOnly:    true,
 			Handler:      serveReindex,
 			Description:  "Reindex all documents",
 			Args: []*EndpointArg{

@@ -89,10 +89,12 @@ type webContext struct {
 	csrf     string
 	UserID   uint
 	Username string
+	IsAdmin  bool
 }
 
 func init() {
 	gob.Register(uint(0))
+	gob.Register(false)
 	sub, err := iofs.Sub(static.FS, "app")
 	if err != nil {
 		panic(err)
@@ -190,7 +192,11 @@ func registerEndpoints(cfg *config.Config) http.Handler {
 		if tokenAuth {
 			h = withTokenAuth(h)
 		} else if userHandling && !e.NoAuth {
-			h = withUserAuth(h)
+			if e.AdminOnly {
+				h = withAdminAuth(h)
+			} else {
+				h = withUserAuth(h)
+			}
 		}
 		mux.HandleFunc(e.Pattern(), createHandler(cfg, h))
 	}
@@ -283,11 +289,15 @@ func populateUserContext(c *webContext) {
 	if name, ok := session.Values["username"].(string); ok {
 		c.Username = name
 	}
+	if admin, ok := session.Values["is_admin"].(bool); ok {
+		c.IsAdmin = admin
+	}
 	if c.UserID == 0 {
 		if tok := c.Request.Header.Get("X-Access-Token"); tok != "" {
 			if u, err := model.GetUserByToken(tok); err == nil {
 				c.UserID = u.ID
 				c.Username = u.Username
+				c.IsAdmin = u.IsAdmin
 			}
 		}
 	}
@@ -296,6 +306,21 @@ func populateUserContext(c *webContext) {
 func withUserAuth(handler endpointHandler) endpointHandler {
 	return func(c *webContext) {
 		if c.UserID == 0 {
+			serve403(c)
+			return
+		}
+		handler(c)
+	}
+}
+
+func withAdminAuth(handler endpointHandler) endpointHandler {
+	return func(c *webContext) {
+		if c.UserID == 0 {
+			serve403(c)
+			return
+		}
+		if !c.IsAdmin {
+			log.Warn().Msg("Admin permission required")
 			serve403(c)
 			return
 		}
@@ -488,6 +513,7 @@ func serveLogin(c *webContext) {
 	}
 	session.Values["user_id"] = user.ID
 	session.Values["username"] = user.Username
+	session.Values["is_admin"] = user.IsAdmin
 	if err := session.Save(c.Request, c.Response); err != nil {
 		serve500(c)
 		return
@@ -503,6 +529,7 @@ func serveLogout(c *webContext) {
 	}
 	delete(session.Values, "user_id")
 	delete(session.Values, "username")
+	delete(session.Values, "is_admin")
 	if err := session.Save(c.Request, c.Response); err != nil {
 		serve500(c)
 		return
@@ -515,6 +542,7 @@ func serveProfile(c *webContext) {
 		c.JSON(map[string]any{
 			"user_id":  c.UserID,
 			"username": c.Username,
+			"is_admin": c.IsAdmin,
 		})
 		return
 	}

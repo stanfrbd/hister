@@ -22,9 +22,10 @@ type User struct {
 	Username string `gorm:"uniqueIndex" json:"username"`
 	Password string `json:"-"`
 	Token    string `json:"-"`
+	IsAdmin  bool   `json:"is_admin"`
 }
 
-func CreateUser(username, password string) (*User, error) {
+func CreateUser(username, password string, isAdmin bool) (*User, error) {
 	var existing User
 	if err := DB.Where("username = ?", username).First(&existing).Error; err == nil {
 		return nil, ErrUserAlreadyExists
@@ -33,7 +34,7 @@ func CreateUser(username, password string) (*User, error) {
 	if err != nil {
 		return nil, err
 	}
-	u := &User{Username: username, Password: string(hash), Token: rand.Text()}
+	u := &User{Username: username, Password: string(hash), Token: rand.Text(), IsAdmin: isAdmin}
 	return u, DB.Create(u).Error
 }
 

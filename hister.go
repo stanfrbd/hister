@@ -313,7 +313,8 @@ var createUserCmd = &cobra.Command{
 		if password != confirm {
 			exit(1, "passwords do not match")
 		}
-		if _, err := model.CreateUser(username, password); err != nil {
+		isAdmin, _ := cmd.Flags().GetBool("admin")
+		if _, err := model.CreateUser(username, password, isAdmin); err != nil {
 			exit(1, "Failed to create user: "+err.Error())
 		}
 		fmt.Println(cliSuccessStyle.Render("✓") + " User created: " + cliInfoStyle.Render(username))
@@ -388,6 +389,8 @@ func init() {
 	listenCmd.Flags().StringP("address", "a", dcfg.Server.Address, "Listen address")
 
 	importCmd.Flags().IntP("min-visit", "m", 1, "only import URLs that were opened at least 'min-visit' times")
+
+	createUserCmd.Flags().Bool("admin", false, "create user with admin privileges")
 
 	reindexCmd.Flags().BoolP("exclude-sensitive", "x", false, "don't add documents that contain sensitive content matched by config.SensitiveContentPatterns")
 
