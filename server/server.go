@@ -1002,8 +1002,14 @@ func serveAPI(c *webContext) {
 
 func serveStats(c *webContext) {
 	hs, _ := model.GetLatestHistoryItems(c.UserID, 5, 0)
+	var docCount uint64
+	if c.Config.App.UserHandling {
+		docCount = indexer.DocumentCountByUser(c.UserID)
+	} else {
+		docCount = indexer.DocumentCount()
+	}
 	c.JSON(map[string]any{
-		"doc_count":       indexer.DocumentCount(),
+		"doc_count":       docCount,
 		"rule_count":      c.Config.Rules.Count(),
 		"alias_count":     len(c.Config.Rules.Aliases),
 		"recent_searches": hs,

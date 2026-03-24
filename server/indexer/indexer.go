@@ -303,12 +303,29 @@ func DocumentCount() uint64 {
 	return i.Total()
 }
 
+func DocumentCountByUser(userID uint) uint64 {
+	return i.TotalByUser(userID)
+}
+
 func Add(d *Document) error {
 	return i.AddDocument(d)
 }
 
 func (i *indexer) Total() uint64 {
 	q := query.NewMatchAllQuery()
+	req := bleve.NewSearchRequest(q)
+	req.Size = 1
+	res, err := i.idx.Search(req)
+	if err != nil {
+		return 0
+	}
+	return res.Total
+}
+
+func (i *indexer) TotalByUser(userID uint) uint64 {
+	uid := float64(userID)
+	q := bleve.NewNumericRangeInclusiveQuery(&uid, &uid, boolPtr(true), boolPtr(true))
+	q.SetField("user_id")
 	req := bleve.NewSearchRequest(q)
 	req.Size = 1
 	res, err := i.idx.Search(req)
