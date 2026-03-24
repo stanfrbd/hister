@@ -324,7 +324,7 @@ func (i *indexer) AddDocument(d *Document) error {
 			return err
 		}
 	}
-	return i.getOrCreate(d.Language).Index(d.URL, d)
+	return i.getOrCreate(d.Language).Index(d.ID(), d)
 }
 
 func GetLatestDocuments(limit int, latest string) *Results {
@@ -420,7 +420,7 @@ func (b *MultiBatch) Add(d *Document) error {
 	if _, ok := b.batches[d.Language]; !ok {
 		b.batches[d.Language] = idx.NewBatch()
 	}
-	return b.batches[d.Language].Index(d.URL, d)
+	return b.batches[d.Language].Index(d.ID(), d)
 }
 
 func (b *MultiBatch) Delete(u string) error {

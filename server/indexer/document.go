@@ -166,3 +166,10 @@ func (d *Document) processFile(ld LanguageDetector, pu *url.URL) error {
 	d.processed = true
 	return nil
 }
+
+func (d *Document) ID() string {
+	if d.UserID != 0 {
+		return fmt.Sprintf("%d:%s", d.UserID, d.URL)
+	}
+	return d.URL
+}
