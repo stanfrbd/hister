@@ -75,7 +75,7 @@ type MultiBatch struct {
 
 var (
 	i                   *indexer
-	allFields           []string = []string{"url", "title", "text", "favicon", "html", "domain", "added"}
+	allFields           []string = []string{"url", "title", "text", "favicon", "html", "domain", "added", "type"}
 	ErrSensitiveContent          = errors.New("document contains sensitive data")
 	sensitiveContentRe  *regexp.Regexp
 	bleveConfig         map[string]any = map[string]any{
@@ -216,15 +216,21 @@ func Reindex(basePath string, rules *config.Rules, skipSensitiveChecks bool, det
 		b := newMultiBatch(tmpIdx)
 		for _, h := range res.Hits {
 			d := docFromHit(h)
+			if d.Type == types.Local {
+				pu, err := url.Parse(d.URL)
+				if err == nil {
+					if _, err := os.Stat(pu.Path); errors.Is(err, os.ErrNotExist) {
+						log.Warn().Str("URL", d.URL).Msg("Skipping document, file not found")
+						continue
+					}
+				}
+			}
 			log.Debug().Str("URL", d.URL).Msg("Indexing")
 			d.skipSensitiveCheck = skipSensitiveChecks
 			origDate := d.Added
 			if err := d.Process(tmpIdx.langDetector); err != nil {
 				if errors.Is(err, ErrSensitiveContent) {
 					log.Warn().Err(err).Str("URL", d.URL).Msg("Skipping document, sensitive content")
-					continue
-				} else if d.Type == types.Local && errors.Is(err, os.ErrNotExist) {
-					log.Warn().Str("URL", d.URL).Msg("Skipping document, file not found")
 					continue
 				} else if errors.Is(err, ErrNoExtractor) {
 					log.Warn().Err(err).Str("URL", d.URL).Msg("Skipping document, can't extract content")
@@ -566,6 +572,9 @@ func docFromHit(h *search.DocumentMatch) *Document {
 	}
 	if t, ok := h.Fields["added"].(float64); ok {
 		d.Added = int64(t)
+	}
+	if t, ok := h.Fields["type"].(float64); ok {
+		d.Type = types.DocType(t)
 	}
 	return d
 }
