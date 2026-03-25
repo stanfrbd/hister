@@ -168,8 +168,12 @@ func (d *Document) processFile(ld LanguageDetector, pu *url.URL) error {
 }
 
 func (d *Document) ID() string {
-	if d.UserID != 0 {
-		return fmt.Sprintf("%d:%s", d.UserID, d.URL)
+	return GetDocID(d.UserID, d.URL)
+}
+
+func GetDocID(uid uint, url string) string {
+	if uid != 0 {
+		return fmt.Sprintf("%d:%s", uid, url)
 	}
-	return d.URL
+	return url
 }

@@ -440,10 +440,10 @@ func (b *MultiBatch) Add(d *Document) error {
 	return b.batches[d.Language].Index(d.ID(), d)
 }
 
-func (b *MultiBatch) Delete(u string) error {
+func (b *MultiBatch) Delete(id string) error {
 	// Delete from all language indices
 	for _, idx := range b.indexer.indexers {
-		if err := idx.Delete(u); err != nil {
+		if err := idx.Delete(id); err != nil {
 			return err
 		}
 	}
@@ -460,9 +460,9 @@ func (b *MultiBatch) Save() error {
 	return nil
 }
 
-func Delete(u string) error {
+func Delete(id string) error {
 	for _, idx := range i.indexers {
-		if err := idx.Delete(u); err != nil {
+		if err := idx.Delete(id); err != nil {
 			return err
 		}
 	}
