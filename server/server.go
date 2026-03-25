@@ -23,6 +23,7 @@ import (
 	"github.com/asciimoo/hister/config"
 	"github.com/asciimoo/hister/files"
 	"github.com/asciimoo/hister/server/indexer"
+	"github.com/asciimoo/hister/server/indexer/types"
 	"github.com/asciimoo/hister/server/model"
 	"github.com/asciimoo/hister/server/static"
 
@@ -688,11 +689,12 @@ func doSearch(query *indexer.Query, cfg *config.Config, userID uint) (*indexer.R
 	if oq != "" {
 		res.QuerySuggestion = model.GetQuerySuggestion(userID, oq)
 	}
-	if len(cfg.Indexer.Directories) > 0 {
-		for _, doc := range res.Documents {
-			if cfp, cut := strings.CutPrefix(doc.URL, "file://"); cut {
-				doc.URL = cfg.BaseURL("/api/file?path=") + url.QueryEscape(cfp)
-			}
+	for _, doc := range res.Documents {
+		if doc.Type != types.Local {
+			continue
+		}
+		if cfp, cut := strings.CutPrefix(doc.URL, "file://"); cut {
+			doc.URL = cfg.BaseURL("/api/file?path=") + url.QueryEscape(cfp)
 		}
 	}
 	duration := float32(time.Since(start).Milliseconds()) / 1000.
