@@ -34,14 +34,13 @@ import (
 )
 
 var (
-	appSubFS                 iofs.FS
-	staticFileServer         http.Handler
-	sessionStore             *sessions.CookieStore
-	errCSRFMismatch          = errors.New("CSRF token mismatch")
-	storeName                = "hister"
-	tokName                  = "csrf_token"
-	staticTextFiles          map[string][]byte
-	multiUserNotSupportedMsg = map[string]string{"error": "rule management is not yet supported in multi-user mode"}
+	appSubFS         iofs.FS
+	staticFileServer http.Handler
+	sessionStore     *sessions.CookieStore
+	errCSRFMismatch  = errors.New("CSRF token mismatch")
+	storeName        = "hister"
+	tokName          = "csrf_token"
+	staticTextFiles  map[string][]byte
 )
 
 type historyItem struct {
@@ -84,14 +83,22 @@ var ws = websocket.Upgrader{
 }
 
 type webContext struct {
-	Request  *http.Request
-	Response http.ResponseWriter
-	Config   *config.Config
-	nonce    string
-	csrf     string
-	UserID   uint
-	Username string
-	IsAdmin  bool
+	Request   *http.Request
+	Response  http.ResponseWriter
+	Config    *config.Config
+	nonce     string
+	csrf      string
+	UserID    uint
+	Username  string
+	IsAdmin   bool
+	userRules *config.Rules
+}
+
+func (c *webContext) effectiveRules() *config.Rules {
+	if c.Config.App.UserHandling && c.userRules != nil {
+		return c.userRules
+	}
+	return c.Config.Rules
 }
 
 func init() {
@@ -296,12 +303,18 @@ func populateUserContext(c *webContext) {
 				c.UserID = u.ID
 				c.Username = u.Username
 				c.IsAdmin = u.IsAdmin
+				if rules, err := u.ParseRules(); err == nil {
+					c.userRules = rules
+				}
 			}
 		}
 		return
 	}
 	if u, err := model.GetUserByID(c.UserID); err == nil {
 		c.IsAdmin = u.IsAdmin
+		if rules, err := u.ParseRules(); err == nil {
+			c.userRules = rules
+		}
 	}
 }
 
@@ -474,7 +487,7 @@ func serveSPA(c *webContext) {
 	// redirect to configured search engine if query string exists but we have no matching results
 	if q != "" {
 		res, err := indexer.Search(c.Config, &indexer.Query{
-			Text:   c.Config.Rules.ResolveAliases(q),
+			Text:   c.effectiveRules().ResolveAliases(q),
 			UserID: c.UserID,
 		})
 		if err != nil {
@@ -617,7 +630,7 @@ func serveSearch(c *webContext) {
 				}
 			}
 		}
-		r, err := doSearch(query, c.Config, c.UserID)
+		r, err := doSearch(query, c.Config, c.effectiveRules(), c.UserID)
 		if err != nil {
 			fmt.Println(err)
 			serve500(c)
@@ -656,7 +669,7 @@ func serveSearch(c *webContext) {
 			log.Error().Err(err).Msg("failed to parse query")
 			continue
 		}
-		res, err := doSearch(query, c.Config, c.UserID)
+		res, err := doSearch(query, c.Config, c.effectiveRules(), c.UserID)
 		if err != nil {
 			log.Error().Err(err).Msg("search error")
 			continue
@@ -672,10 +685,10 @@ func serveSearch(c *webContext) {
 	}
 }
 
-func doSearch(query *indexer.Query, cfg *config.Config, userID uint) (*indexer.Results, error) {
+func doSearch(query *indexer.Query, cfg *config.Config, rules *config.Rules, userID uint) (*indexer.Results, error) {
 	start := time.Now()
 	oq := query.Text
-	query.Text = cfg.Rules.ResolveAliases(query.Text)
+	query.Text = rules.ResolveAliases(query.Text)
 	query.UserID = userID
 	res, err := indexer.Search(cfg, query)
 	if err != nil {
@@ -734,7 +747,7 @@ func serveAdd(c *webContext) {
 		d.Title = f.Get("title")
 		d.Text = f.Get("text")
 	}
-	if !c.Config.Rules.IsSkip(d.URL) && !strings.HasPrefix(d.URL, c.Config.BaseURL("/")) {
+	if !c.effectiveRules().IsSkip(d.URL) && !strings.HasPrefix(d.URL, c.Config.BaseURL("/")) {
 		d.UserID = c.UserID
 		err := indexer.Add(d)
 		log.Debug().Str("URL", d.URL).Msg("item added to index")
@@ -822,21 +835,22 @@ func serveSaveHistory(c *webContext) {
 
 func serveRules(c *webContext) {
 	m := c.Request.Method
+	rules := c.effectiveRules()
 	if m == http.MethodGet {
 		type rulesResponse struct {
 			Skip     []string          `json:"skip"`
 			Priority []string          `json:"priority"`
 			Aliases  map[string]string `json:"aliases"`
 		}
-		skip := c.Config.Rules.Skip.ReStrs
+		skip := rules.Skip.ReStrs
 		if skip == nil {
 			skip = []string{}
 		}
-		priority := c.Config.Rules.Priority.ReStrs
+		priority := rules.Priority.ReStrs
 		if priority == nil {
 			priority = []string{}
 		}
-		aliases := map[string]string(c.Config.Rules.Aliases)
+		aliases := map[string]string(rules.Aliases)
 		if aliases == nil {
 			aliases = make(map[string]string)
 		}
@@ -847,23 +861,32 @@ func serveRules(c *webContext) {
 		serve500(c)
 		return
 	}
-	if c.Config.App.UserHandling {
-		c.JSONStatus(http.StatusNotImplemented, multiUserNotSupportedMsg)
-		return
-	}
 	err := c.Request.ParseForm()
 	if err != nil {
 		serve500(c)
 		return
 	}
 	f := c.Request.PostForm
-	c.Config.Rules.Skip.ReStrs = strings.Fields(f.Get("skip"))
-	c.Config.Rules.Priority.ReStrs = strings.Fields(f.Get("priority"))
-	err = c.Config.SaveRules()
-	if err != nil {
-		log.Error().Err(err).Msg("failed to save rules")
+	rules.Skip.ReStrs = strings.Fields(f.Get("skip"))
+	rules.Priority.ReStrs = strings.Fields(f.Get("priority"))
+	if err := rules.Compile(); err != nil {
+		log.Error().Err(err).Msg("failed to compile rules")
 		serve500(c)
 		return
+	}
+	if c.Config.App.UserHandling {
+		if err := model.SaveUserRules(c.UserID, rules); err != nil {
+			log.Error().Err(err).Msg("failed to save user rules")
+			serve500(c)
+			return
+		}
+		c.userRules = rules
+	} else {
+		if err := c.Config.SaveRules(); err != nil {
+			log.Error().Err(err).Msg("failed to save rules")
+			serve500(c)
+			return
+		}
 	}
 	serve200(c)
 }
@@ -1016,10 +1039,11 @@ func serveStats(c *webContext) {
 	} else {
 		docCount = indexer.DocumentCount()
 	}
+	rules := c.effectiveRules()
 	c.JSON(map[string]any{
 		"doc_count":       docCount,
-		"rule_count":      c.Config.Rules.Count(),
-		"alias_count":     len(c.Config.Rules.Aliases),
+		"rule_count":      rules.Count(),
+		"alias_count":     len(rules.Aliases),
 		"recent_searches": hs,
 	})
 }
@@ -1039,49 +1063,62 @@ func serveOpensearch(c *webContext) {
 }
 
 func serveAddAlias(c *webContext) {
-	if c.Config.App.UserHandling {
-		// TODO
-		c.JSONStatus(http.StatusNotImplemented, multiUserNotSupportedMsg)
-		return
-	}
 	err := c.Request.ParseForm()
 	if err != nil {
 		serve500(c)
 		return
 	}
 	f := c.Request.PostForm
-	if f.Get("alias-keyword") != "" && f.Get("alias-value") != "" {
-		c.Config.Rules.Aliases[f.Get("alias-keyword")] = f.Get("alias-value")
-	}
-	err = c.Config.SaveRules()
-	if err != nil {
-		log.Error().Err(err).Msg("failed to save rules")
-		serve500(c)
+	keyword, value := f.Get("alias-keyword"), f.Get("alias-value")
+	if keyword == "" || value == "" {
+		serve200(c)
 		return
+	}
+	rules := c.effectiveRules()
+	rules.Aliases[keyword] = value
+	if c.Config.App.UserHandling {
+		if err := model.SaveUserRules(c.UserID, rules); err != nil {
+			log.Error().Err(err).Msg("failed to save user rules")
+			serve500(c)
+			return
+		}
+		c.userRules = rules
+	} else {
+		if err := c.Config.SaveRules(); err != nil {
+			log.Error().Err(err).Msg("failed to save rules")
+			serve500(c)
+			return
+		}
 	}
 	serve200(c)
 }
 
 func serveDeleteAlias(c *webContext) {
-	if c.Config.App.UserHandling {
-		// TODO
-		c.JSONStatus(http.StatusNotImplemented, multiUserNotSupportedMsg)
-		return
-	}
 	err := c.Request.ParseForm()
 	if err != nil {
 		serve500(c)
 		return
 	}
 	a := c.Request.PostForm.Get("alias")
-	if _, ok := c.Config.Rules.Aliases[a]; !ok {
+	rules := c.effectiveRules()
+	if _, ok := rules.Aliases[a]; !ok {
 		serve500(c)
 		return
 	}
-	delete(c.Config.Rules.Aliases, a)
-	if err := c.Config.SaveRules(); err != nil {
-		log.Error().Err(err).Msg("failed to save rules")
-		serve500(c)
+	delete(rules.Aliases, a)
+	if c.Config.App.UserHandling {
+		if err := model.SaveUserRules(c.UserID, rules); err != nil {
+			log.Error().Err(err).Msg("failed to save user rules")
+			serve500(c)
+			return
+		}
+		c.userRules = rules
+	} else {
+		if err := c.Config.SaveRules(); err != nil {
+			log.Error().Err(err).Msg("failed to save rules")
+			serve500(c)
+			return
+		}
 	}
 	serve200(c)
 }
@@ -1162,7 +1199,7 @@ func serveBatch(c *webContext) {
 				continue
 			}
 			d := &indexer.Document{URL: op.URL, Title: op.Title, Text: op.Text, HTML: op.HTML, Favicon: op.Favicon}
-			if c.Config.Rules.IsSkip(d.URL) || strings.HasPrefix(d.URL, c.Config.BaseURL("/")) {
+			if c.effectiveRules().IsSkip(d.URL) || strings.HasPrefix(d.URL, c.Config.BaseURL("/")) {
 				results[i] = batchOpResult{Status: http.StatusNotAcceptable, Error: "url skipped by rules"}
 				continue
 			}

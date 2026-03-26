@@ -6,7 +6,10 @@ package model
 
 import (
 	"crypto/rand"
+	"encoding/json"
 	"errors"
+
+	"github.com/asciimoo/hister/config"
 
 	"golang.org/x/crypto/bcrypt"
 )
@@ -19,10 +22,53 @@ var (
 
 type User struct {
 	CommonFields
-	Username string `gorm:"uniqueIndex" json:"username"`
-	Password string `json:"-"`
-	Token    string `json:"-"`
-	IsAdmin  bool   `json:"is_admin"`
+	Username  string `gorm:"uniqueIndex" json:"username"`
+	Password  string `json:"-"`
+	Token     string `json:"-"`
+	IsAdmin   bool   `json:"is_admin"`
+	RulesJSON string `gorm:"column:rules_json;default:'{}'" json:"-"`
+}
+
+func (u *User) ParseRules() (*config.Rules, error) {
+	r := &config.Rules{
+		Skip:     &config.Rule{ReStrs: []string{}},
+		Priority: &config.Rule{ReStrs: []string{}},
+		Aliases:  make(config.Aliases),
+	}
+	if u.RulesJSON != "" && u.RulesJSON != "{}" {
+		if err := json.Unmarshal([]byte(u.RulesJSON), r); err != nil {
+			return nil, err
+		}
+		if r.Skip == nil {
+			r.Skip = &config.Rule{ReStrs: []string{}}
+		}
+		if r.Priority == nil {
+			r.Priority = &config.Rule{ReStrs: []string{}}
+		}
+		if r.Aliases == nil {
+			r.Aliases = make(config.Aliases)
+		}
+	}
+	if err := r.Compile(); err != nil {
+		return nil, err
+	}
+	return r, nil
+}
+
+func GetUserRules(userID uint) (*config.Rules, error) {
+	var u User
+	if err := DB.Select("rules_json").First(&u, userID).Error; err != nil {
+		return nil, ErrUserNotFound
+	}
+	return u.ParseRules()
+}
+
+func SaveUserRules(userID uint, rules *config.Rules) error {
+	b, err := json.Marshal(rules)
+	if err != nil {
+		return err
+	}
+	return DB.Model(&User{}).Where("id = ?", userID).Update("rules_json", string(b)).Error
 }
 
 func CreateUser(username, password string, isAdmin bool) (*User, error) {

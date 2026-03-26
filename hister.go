@@ -919,7 +919,8 @@ func importDB(dbFile string, table string, cmd *cobra.Command) {
 			log.Error().Err(err).Msg("Failed to scan database row")
 			return
 		}
-		if cfg.Rules.IsSkip(u) {
+		// skip URLs only in single user environments
+		if !cfg.App.UserHandling && cfg.Rules.IsSkip(u) {
 			log.Debug().Str("URL", u).Msg("skip importing URL by rule")
 			continue
 		}
