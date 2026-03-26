@@ -348,10 +348,6 @@ func (c *Config) init() error {
 		c.App.Directory = dataDir
 	}
 
-	if c.App.AccessToken != "" && c.App.UserHandling {
-		return errors.New("cannot use both access_token and user_handling in configuration")
-	}
-
 	if envPort := os.Getenv("HISTER_PORT"); envPort != "" {
 		host, _, err := net.SplitHostPort(c.Server.Address)
 		if err != nil || host == "" {

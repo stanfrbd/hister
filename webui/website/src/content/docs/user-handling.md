@@ -4,7 +4,7 @@ draft: false
 title: 'User Handling'
 ---
 
-User handling enables multiple independent users to share a single Hister instance. Each user has their own credentials, their own isolated search index, and their own access token for the API clients. User handling is disabled by default, making Hister fully backward compatible. Existing single-user setups require no changes.
+User handling enables multiple independent users to share a single Hister instance. Each user has their own credentials, their own isolated search index, and their own access token for API clients. User handling is disabled by default, making Hister fully backward compatible. Existing single-user setups require no changes.
 
 ## Activation
 
@@ -15,7 +15,7 @@ app:
   user_handling: true
 ```
 
-> **Note**: `user_handling` and `access_token` are mutually exclusive. Hister will refuse to start if both are set simultaneously.
+> **Note**: When `user_handling` is active, `access_token` is used only to authenticate users by comparing it to the user's access token. This can be useful when the Hister admin sets `app.access_token` in the configuration file to their personal access token in order to execute command-line Hister commands as the admin user.
 
 After enabling user handling, restart the server and create at least one user account before attempting to log in.
 
@@ -114,6 +114,18 @@ hister update-user USERNAME [--username NEW] [--regen-token] [--toggle-admin]
 | `--toggle-admin` | Toggle admin status on or off.                                     |
 
 Flags may be combined. When `--username` is used together with other flags, the rename is applied first.
+
+## Per-User Rules and Aliases
+
+When user handling is enabled, each user has their own set of rules and aliases stored in the database. Changes made through the web UI or API affect only the authenticated user's rules and do not modify the configuration file.
+
+- **Skip rules**: URLs matching a user's skip rules are silently ignored when indexing, just as in single-user mode.
+- **Priority rules**: A user's priority rules boost matching results to the top of their search results.
+- **Search aliases**: Aliases defined by a user apply only to that user's searches.
+
+Users can view and edit their rules and aliases through the **Rules** tab in the web interface, or via the API endpoints.
+
+In single-user mode (user handling disabled), rules and aliases continue to be read from and written to the configuration file on disk.
 
 ## Admin Users
 

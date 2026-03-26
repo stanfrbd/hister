@@ -197,7 +197,7 @@ func registerEndpoints(cfg *config.Config) http.Handler {
 		if e.CSRFRequired {
 			h = withCSRF(h)
 		}
-		if tokenAuth {
+		if tokenAuth && !userHandling {
 			h = withTokenAuth(h)
 		} else if userHandling && !e.NoAuth {
 			if e.AdminOnly {
@@ -587,10 +587,10 @@ func serveConfig(c *webContext) {
 		Username            string            `json:"username,omitempty"`
 	}
 	authMode := "none"
-	if c.Config.App.AccessToken != "" {
-		authMode = "token"
-	} else if c.Config.App.UserHandling {
+	if c.Config.App.UserHandling {
 		authMode = "user"
+	} else if c.Config.App.AccessToken != "" {
+		authMode = "token"
 	}
 	hotkeys := c.Config.Hotkeys.Web
 	if hotkeys == nil {
