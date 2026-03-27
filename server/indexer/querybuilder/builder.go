@@ -2,6 +2,7 @@ package querybuilder
 
 import (
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/asciimoo/hister/server/indexer/types"
@@ -74,6 +75,14 @@ func getTokenQuery(t Token) (query.Query, bool) {
 				to := float64(t + 1)
 				q := bleve.NewNumericRangeQuery(&from, &to)
 				q.SetField("type")
+				return q, negated
+			}
+		}
+		if v, ok := strings.CutPrefix(t.Value, "user_id:"); ok {
+			if uid, err := strconv.ParseUint(v, 10, 64); err == nil {
+				f := float64(uid)
+				q := bleve.NewNumericRangeInclusiveQuery(&f, &f, boolPtr(true), boolPtr(true))
+				q.SetField("user_id")
 				return q, negated
 			}
 		}
@@ -167,3 +176,5 @@ func normalizeFileURL(v string) string {
 	}
 	return "file://" + v
 }
+
+func boolPtr(b bool) *bool { return &b }

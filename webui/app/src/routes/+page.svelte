@@ -16,7 +16,7 @@
     parseSearchResults,
     openURL,
   } from '$lib/search';
-  import { fetchConfig, apiFetch } from '$lib/api';
+  import { fetchConfig, apiFetch, getUserId } from '$lib/api';
   import type { SearchResults } from '$lib/search';
   import { animate } from 'animejs';
   import { Input } from '@hister/components/ui/input';
@@ -241,7 +241,7 @@
     await apiFetch('/delete', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ query: 'url:' + url }),
+      body: JSON.stringify({ query: 'url:' + url + (getUserId() !== undefined ? ' user_id:' + getUserId() : '') }),
     });
     if (lastResults?.documents) {
       lastResults = {

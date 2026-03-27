@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { fetchConfig, apiFetch } from '$lib/api';
+  import { fetchConfig, apiFetch, getUserId } from '$lib/api';
   import { formatTimestamp, formatRelativeTime } from '$lib/search';
   import type { HistoryItem } from '$lib/types';
   import { Button } from '@hister/components/ui/button';
@@ -214,7 +214,7 @@
         await apiFetch('/delete', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ query: 'url:' + item.url }),
+          body: JSON.stringify({ query: 'url:' + item.url + (getUserId() !== undefined ? ' user_id:' + getUserId() : '') }),
         });
       }
       items = items.filter((i) => i.url !== item.url);
