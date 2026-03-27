@@ -214,7 +214,9 @@
         await apiFetch('/delete', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ query: 'url:' + item.url + (getUserId() !== undefined ? ' user_id:' + getUserId() : '') }),
+          body: JSON.stringify({
+            query: 'url:' + item.url + (getUserId() !== undefined ? ' user_id:' + getUserId() : ''),
+          }),
         });
       }
       items = items.filter((i) => i.url !== item.url);

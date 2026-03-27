@@ -241,7 +241,9 @@
     await apiFetch('/delete', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ query: 'url:' + url + (getUserId() !== undefined ? ' user_id:' + getUserId() : '') }),
+      body: JSON.stringify({
+        query: 'url:' + url + (getUserId() !== undefined ? ' user_id:' + getUserId() : ''),
+      }),
     });
     if (lastResults?.documents) {
       lastResults = {
