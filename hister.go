@@ -261,27 +261,24 @@ var indexCmd = &cobra.Command{
 }
 
 var deleteCmd = &cobra.Command{
-	Use:   "delete URL [URL...]",
-	Short: "Remove page from the index",
-	Long:  "Remove one or more pages from the index",
-	Args:  cobra.MinimumNArgs(1),
+	Use:   "delete QUERY",
+	Short: "Remove documents from the index",
+	Long: `Remove documents from the index using the search query language.
+
+The QUERY syntax is the same as the search queries.
+
+Examples:
+  hister delete "url:https://example.com/page"
+  hister delete "url:file:///home/user/file.pdf"
+  hister delete "domain:example.com"
+  hister delete "language:en domain:example.com"
+
+Non-admin users are restricted to their own documents by the server.`,
+	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		c := newClient()
-		for _, u := range args {
-			if u == "" {
-				log.Warn().Msg("URL must not be empty")
-				continue
-			}
-			if !strings.Contains(u, "://") {
-				absPath, err := filepath.Abs(u)
-				if err != nil {
-					exit(1, "Failed to resolve path: "+err.Error())
-				}
-				u = "file://" + absPath
-			}
-			if err := c.DeleteDocument(u); err != nil {
-				exit(1, "Failed to delete URL: "+err.Error())
-			}
+		if err := c.DeleteDocuments(args[0]); err != nil {
+			exit(1, "Failed to delete: "+err.Error())
 		}
 	},
 }

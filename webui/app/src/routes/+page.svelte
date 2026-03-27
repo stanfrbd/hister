@@ -238,8 +238,11 @@
   }
 
   async function deleteResult(url: string) {
-    const data = new URLSearchParams({ url });
-    await apiFetch('/delete', { method: 'POST', body: data });
+    await apiFetch('/delete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query: 'url:' + url }),
+    });
     if (lastResults?.documents) {
       lastResults = {
         ...lastResults,

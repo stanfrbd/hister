@@ -5,6 +5,7 @@ export interface AppConfig {
   hotkeys: Record<string, string>;
   authMode: 'token' | 'user' | 'none';
   username?: string;
+  userId?: number;
 }
 
 let _config: AppConfig | null = null;
@@ -24,6 +25,10 @@ export function getAuthMode(): string {
 
 export function getUsername(): string {
   return _config?.username ?? '';
+}
+
+export function getUserId(): number | undefined {
+  return _config?.userId;
 }
 
 export function resetConfig(): void {

@@ -1,6 +1,7 @@
 package querybuilder
 
 import (
+	"path/filepath"
 	"strings"
 
 	"github.com/asciimoo/hister/server/indexer/types"
@@ -95,6 +96,9 @@ func getTokenQuery(t Token) (query.Query, bool) {
 				return q, negated
 			}
 			if field == "url" || field == "domain" {
+				if field == "url" {
+					v = normalizeFileURL(v)
+				}
 				q := bleve.NewTermQuery(strings.ToLower(v))
 				q.SetField(field)
 				q.SetBoost(weights[field])
@@ -149,4 +153,17 @@ func getTokenQuery(t Token) (query.Query, bool) {
 		return bleve.NewDisjunctionQuery(qs...), negated
 	}
 	return bleve.NewQueryStringQuery(t.Value), negated
+}
+
+func normalizeFileURL(v string) string {
+	if strings.HasPrefix(v, "*") {
+		return v
+	}
+	if strings.Contains(v, "://") {
+		return v
+	}
+	if abs, err := filepath.Abs(v); err == nil {
+		v = abs
+	}
+	return "file://" + v
 }

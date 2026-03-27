@@ -585,6 +585,7 @@ func serveConfig(c *webContext) {
 		Hotkeys             map[string]string `json:"hotkeys"`
 		AuthMode            string            `json:"authMode"`
 		Username            string            `json:"username,omitempty"`
+		UserID              uint              `json:"userId,omitempty"`
 	}
 	authMode := "none"
 	if c.Config.App.UserHandling {
@@ -605,6 +606,7 @@ func serveConfig(c *webContext) {
 		Hotkeys:             hotkeys,
 		AuthMode:            authMode,
 		Username:            c.Username,
+		UserID:              c.UserID,
 	})
 }
 
@@ -1123,21 +1125,30 @@ func serveDeleteAlias(c *webContext) {
 	serve200(c)
 }
 
-func serveDeleteDocument(c *webContext) {
-	err := c.Request.ParseForm()
+func serveDelete(c *webContext) {
+	var req struct {
+		Query string `json:"query"`
+	}
+	if err := json.NewDecoder(c.Request.Body).Decode(&req); err != nil {
+		http.Error(c.Response, "invalid JSON: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	// Non-admin users may only delete their own documents.
+	var userID *uint
+	if c.Config.App.UserHandling && !c.IsAdmin {
+		userID = &c.UserID
+	}
+	count, err := indexer.DeleteByQuery(req.Query, userID)
 	if err != nil {
+		if errors.Is(err, indexer.ErrEmptyFilter) {
+			http.Error(c.Response, err.Error(), http.StatusBadRequest)
+			return
+		}
+		log.Error().Err(err).Msg("delete failed")
 		serve500(c)
 		return
 	}
-	u := c.Request.PostForm.Get("url")
-	if fp, err := url.QueryUnescape(strings.TrimPrefix(u, c.Config.BaseURL("/api/file?path="))); err == nil && fp != u {
-		u = "file://" + fp
-	}
-	docID := indexer.GetDocID(c.UserID, u)
-	if err := indexer.Delete(docID); err != nil {
-		log.Error().Err(err).Str("URL", u).Msg("failed to delete URL")
-	}
-	serve200(c)
+	c.JSON(map[string]any{"deleted": count})
 }
 
 type batchOp struct {
@@ -1214,12 +1225,8 @@ func serveBatch(c *webContext) {
 				results[i] = batchOpResult{Status: http.StatusBadRequest, Error: "missing url"}
 				continue
 			}
-			if err := batch.Delete(op.URL); err != nil {
-				log.Error().Err(err).Str("URL", op.URL).Msg("batch delete error")
-				results[i] = batchOpResult{Status: http.StatusInternalServerError, Error: "internal error"}
-			} else {
-				results[i] = batchOpResult{Status: http.StatusOK}
-			}
+			batch.Delete(op.URL)
+			results[i] = batchOpResult{Status: http.StatusOK}
 		case batchOpGet:
 			if op.URL == "" {
 				results[i] = batchOpResult{Status: http.StatusBadRequest, Error: "missing url"}

@@ -146,8 +146,11 @@ func init() {
 			Path:         "/api/delete",
 			Method:       POST,
 			CSRFRequired: true,
-			Handler:      serveDeleteDocument,
-			Description:  "Delete document endpoint",
+			Handler:      serveDelete,
+			Description:  "Delete documents matching a search query. Non-admin users are restricted to their own documents.",
+			Args: []*EndpointArg{
+				{Name: "query", Type: "string", Required: true, Description: "Search query string selecting documents to delete (same syntax as the search endpoint)"},
+			},
 		},
 		{
 			Name:         "Delete alias",

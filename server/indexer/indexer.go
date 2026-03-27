@@ -79,6 +79,7 @@ var (
 	i                   *indexer
 	allFields           []string = []string{"url", "title", "text", "favicon", "html", "domain", "added", "type", "user_id"}
 	ErrSensitiveContent          = errors.New("document contains sensitive data")
+	ErrEmptyFilter               = errors.New("delete query must not be empty")
 	sensitiveContentRe  *regexp.Regexp
 	bleveConfig         map[string]any = map[string]any{
 		"bolt_timeout": "2s",
@@ -427,6 +428,13 @@ func newMultiBatch(idx *indexer) *MultiBatch {
 	}
 }
 
+func (b *MultiBatch) getOrCreateBatch(name string, idx bleve.Index) *bleve.Batch {
+	if _, ok := b.batches[name]; !ok {
+		b.batches[name] = idx.NewBatch()
+	}
+	return b.batches[name]
+}
+
 func (b *MultiBatch) Add(d *Document) error {
 	if !d.processed {
 		if err := d.Process(i.langDetector); err != nil {
@@ -434,26 +442,18 @@ func (b *MultiBatch) Add(d *Document) error {
 		}
 	}
 	idx := b.indexer.getOrCreate(d.Language)
-	if _, ok := b.batches[d.Language]; !ok {
-		b.batches[d.Language] = idx.NewBatch()
-	}
-	return b.batches[d.Language].Index(d.ID(), d)
+	return b.getOrCreateBatch(idx.Name(), idx).Index(d.ID(), d)
 }
 
-func (b *MultiBatch) Delete(id string) error {
-	// Delete from all language indices
-	for _, idx := range b.indexer.indexers {
-		if err := idx.Delete(id); err != nil {
-			return err
-		}
+func (b *MultiBatch) Delete(id string) {
+	for name, idx := range b.indexer.indexers {
+		b.getOrCreateBatch(name, idx).Delete(id)
 	}
-	return nil
 }
 
 func (b *MultiBatch) Save() error {
-	for l, lb := range b.batches {
-		idx := b.indexer.getOrCreate(l)
-		if err := idx.Batch(lb); err != nil {
+	for name, lb := range b.batches {
+		if err := b.indexer.indexers[name].Batch(lb); err != nil {
 			return err
 		}
 	}
@@ -467,6 +467,50 @@ func Delete(id string) error {
 		}
 	}
 	return nil
+}
+
+func DeleteByQuery(text string, userID *uint) (int, error) {
+	if strings.TrimSpace(text) == "" {
+		return 0, ErrEmptyFilter
+	}
+	q := querybuilder.Build(text)
+	if userID != nil {
+		uid := float64(*userID)
+		userQ := bleve.NewNumericRangeInclusiveQuery(&uid, &uid, boolPtr(true), boolPtr(true))
+		userQ.SetField("user_id")
+		q = bleve.NewConjunctionQuery(q, userQ)
+	}
+
+	count := 0
+	const pageSize = 200
+	var searchAfter []string
+	for {
+		req := bleve.NewSearchRequest(q)
+		req.Fields = []string{}
+		req.Size = pageSize
+		req.SortBy([]string{"_id"})
+		if len(searchAfter) > 0 {
+			req.SetSearchAfter(searchAfter)
+		}
+		res, err := i.idx.Search(req)
+		if err != nil {
+			return count, err
+		}
+		n := len(res.Hits)
+		if n == 0 {
+			break
+		}
+		batch := newMultiBatch(i)
+		for _, h := range res.Hits {
+			batch.Delete(h.ID)
+		}
+		if err := batch.Save(); err != nil {
+			return count, err
+		}
+		count += n
+		searchAfter = res.Hits[n-1].Sort
+	}
+	return count, nil
 }
 
 func Search(cfg *config.Config, q *Query) (*Results, error) {

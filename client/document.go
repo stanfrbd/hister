@@ -79,12 +79,19 @@ func (c *Client) Reindex(skipSensitive, detectLanguages bool) (err error) {
 }
 
 func (c *Client) DeleteDocument(u string) (err error) {
-	formData := url.Values{"url": {u}}
-	req, err := c.newRequest("POST", "/api/delete", strings.NewReader(formData.Encode()))
+	return c.DeleteDocuments("url:" + u)
+}
+
+func (c *Client) DeleteDocuments(query string) (err error) {
+	data, err := json.Marshal(map[string]string{"query": query})
 	if err != nil {
 		return err
 	}
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req, err := c.newRequest("POST", "/api/delete", bytes.NewReader(data))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", "application/json")
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
 		return err

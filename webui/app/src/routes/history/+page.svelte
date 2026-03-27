@@ -211,8 +211,11 @@
           body: JSON.stringify({ query: item.query, url: item.url, delete: true }),
         });
       } else {
-        const data = new URLSearchParams({ url: item.url });
-        await apiFetch('/delete', { method: 'POST', body: data });
+        await apiFetch('/delete', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ query: 'url:' + item.url }),
+        });
       }
       items = items.filter((i) => i.url !== item.url);
     } catch (e) {
