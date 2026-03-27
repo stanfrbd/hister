@@ -9,6 +9,14 @@ const sleepIncrementRatio = 2;
 // @ts-ignore
 var isFirefox = typeof InstallTrigger !== 'undefined';
 
+function isContextValid(): boolean {
+  try {
+    return !!chrome.runtime.id;
+  } catch (_) {
+    return false;
+  }
+}
+
 if (isFirefox) {
   if (document.readyState === 'complete') {
     extract(null);
@@ -21,7 +29,10 @@ if (isFirefox) {
 window.addEventListener('navigatesuccess', update);
 
 function extract(sendResponse, actionType) {
-  registerResultExtractor(window, (r) => chrome.runtime.sendMessage({ resultData: r }));
+  if (!isContextValid()) return;
+  registerResultExtractor(window, (r) => {
+    if (isContextValid()) chrome.runtime.sendMessage({ resultData: r });
+  });
   try {
     d = extractPageData();
   } catch (e) {
@@ -45,7 +56,7 @@ function extract(sendResponse, actionType) {
 }
 
 function update() {
-  if (!d) {
+  if (!d || !isContextValid()) {
     return;
   }
   let d2;
