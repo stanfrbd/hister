@@ -34,8 +34,8 @@ func ExpandHome(path string) string {
 // Debounce so we don't spam the index as write events can file multiple times before closing a file after editing
 const debounceTime = 200 * time.Millisecond
 
-// findMatchingDir returns the Directory config whose expanded path contains filePath, or nil.
-func findMatchingDir(dirs []*config.Directory, filePath string) *config.Directory {
+// FindMatchingDir returns the Directory config whose expanded path contains filePath, or nil.
+func FindMatchingDir(dirs []*config.Directory, filePath string) *config.Directory {
 	for i := range dirs {
 		dirPath := filepath.Clean(ExpandHome(dirs[i].Path))
 		if strings.HasPrefix(filePath, dirPath+"/") || filePath == dirPath {
@@ -114,7 +114,7 @@ func walkAndWatch(watcher *fsnotify.Watcher, dirs []*config.Directory) {
 // handleWrite debounces a file-write event and invokes the callback after the
 // debounce period.
 func handleWrite(event fsnotify.Event, dirs []*config.Directory, mu *sync.Mutex, debounced map[string]*time.Timer, callback func(string)) {
-	dir := findMatchingDir(dirs, event.Name)
+	dir := FindMatchingDir(dirs, event.Name)
 	if dir == nil || !dir.IsMatching(event.Name) {
 		return
 	}
@@ -141,7 +141,7 @@ func handleCreate(event fsnotify.Event, dirs []*config.Directory, watcher *fsnot
 		return
 	}
 	if st.IsDir() {
-		dir := findMatchingDir(dirs, event.Name)
+		dir := FindMatchingDir(dirs, event.Name)
 		if dir == nil || shouldSkipDir(filepath.Base(event.Name), dir.Excludes, dir.IncludeHidden) {
 			return
 		}
@@ -152,7 +152,7 @@ func handleCreate(event fsnotify.Event, dirs []*config.Directory, watcher *fsnot
 		}
 		return
 	}
-	dir := findMatchingDir(dirs, event.Name)
+	dir := FindMatchingDir(dirs, event.Name)
 	if dir == nil || !dir.IsMatching(event.Name) {
 		return
 	}

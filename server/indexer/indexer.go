@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/asciimoo/hister/config"
+	"github.com/asciimoo/hister/files"
 	"github.com/asciimoo/hister/server/indexer/querybuilder"
 	"github.com/asciimoo/hister/server/indexer/types"
 	"github.com/asciimoo/hister/server/model"
@@ -176,7 +177,7 @@ func initializeIndexer(basePath string, detectLanguages bool) (*indexer, error) 
 	return i, nil
 }
 
-func Reindex(basePath string, rules *config.Rules, skipSensitiveChecks bool, detectLanguages bool) error {
+func Reindex(basePath string, rules *config.Rules, skipSensitiveChecks bool, detectLanguages bool, dirs []*config.Directory) error {
 	// TODO store new documents in both indexes while running reindex to guarantee not losing any data.
 	if i.reindexInProgress {
 		return errors.New("Reindex is already running")
@@ -224,6 +225,10 @@ func Reindex(basePath string, rules *config.Rules, skipSensitiveChecks bool, det
 				if err == nil {
 					if _, err := os.Stat(pu.Path); errors.Is(err, os.ErrNotExist) {
 						log.Warn().Str("URL", d.URL).Msg("Skipping document, file not found")
+						continue
+					}
+					if files.FindMatchingDir(dirs, pu.Path) == nil {
+						log.Warn().Str("URL", d.URL).Msg("Skipping document, directory no longer configured")
 						continue
 					}
 				}

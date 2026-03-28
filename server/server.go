@@ -1264,7 +1264,7 @@ func serveReindex(c *webContext) {
 		serve500(c)
 		return
 	}
-	if err := indexer.Reindex(c.Config.FullPath(""), c.Config.Rules, req.SkipSensitive, req.DetectLanguages); err != nil {
+	if err := indexer.Reindex(c.Config.FullPath(""), c.Config.Rules, req.SkipSensitive, req.DetectLanguages, c.Config.Indexer.Directories); err != nil {
 		log.Error().Err(err).Msg("reindex failed")
 		serve500(c)
 		return
