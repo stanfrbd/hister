@@ -12,6 +12,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/rs/zerolog/log"
+
 	"github.com/asciimoo/hister/config"
 )
 
@@ -82,7 +84,11 @@ func (f *httpFetcher) fetchPage(ctx context.Context, rawURL string) (string, []s
 	if err != nil {
 		return "", nil, err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			log.Warn().Err(err).Msg("crawler: failed to close response body")
+		}
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		return "", nil, fmt.Errorf("unexpected status %d", resp.StatusCode)

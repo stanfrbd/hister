@@ -281,7 +281,11 @@ var indexCmd = &cobra.Command{
 			if err != nil {
 				exit(1, "Failed to initialize crawler: "+err.Error())
 			}
-			defer cr.Close()
+			defer func() {
+				if err := cr.Close(); err != nil {
+					log.Warn().Err(err).Msg("crawler close error")
+				}
+			}()
 
 			for _, u := range args {
 				if err := crawlAndIndex(u, cr, validator); err != nil {
