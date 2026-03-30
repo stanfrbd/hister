@@ -33,6 +33,7 @@ type Config struct {
 	App                      App               `yaml:"app" mapstructure:"app"`
 	Server                   Server            `yaml:"server" mapstructure:"server"`
 	Indexer                  Indexer           `yaml:"indexer" mapstructure:"indexer"`
+	Crawler                  CrawlerConfig     `yaml:"crawler" mapstructure:"crawler"`
 	Hotkeys                  Hotkeys           `yaml:"hotkeys" mapstructure:"hotkeys"`
 	TUI                      TUI               `yaml:"-" mapstructure:"tui"`
 	SensitiveContentPatterns map[string]string `yaml:"sensitive_content_patterns" mapstructure:"sensitive_content_patterns"`
@@ -77,6 +78,25 @@ type Indexer struct {
 	DetectLanguages bool         `yaml:"detect_languages" mapstructure:"detect_languages"`
 	Directories     []*Directory `yaml:"directories" mapstructure:"directories"`
 	MaxFileSize     int64        `yaml:"max_file_size_mb" mapstructure:"max_file_size_mb"`
+}
+
+type CrawlerCookie struct {
+	Name   string `yaml:"name"   mapstructure:"name"`
+	Value  string `yaml:"value"  mapstructure:"value"`
+	Domain string `yaml:"domain" mapstructure:"domain"`
+	Path   string `yaml:"path"   mapstructure:"path"`
+}
+
+// CrawlerConfig holds global crawler settings and backend-specific options.
+// Timeout and Delay default to 5s and 0s respectively when zero.
+type CrawlerConfig struct {
+	Timeout        int               `yaml:"timeout"         mapstructure:"timeout"`
+	Delay          int               `yaml:"delay"           mapstructure:"delay"`
+	Backend        string            `yaml:"backend"         mapstructure:"backend"`
+	BackendOptions map[string]any    `yaml:"backend_options" mapstructure:"backend_options"`
+	UserAgent      string            `yaml:"user_agent"      mapstructure:"user_agent"`
+	Headers        map[string]string `yaml:"headers"         mapstructure:"headers"`
+	Cookies        []CrawlerCookie   `yaml:"cookies"         mapstructure:"cookies"`
 }
 
 type Hotkeys struct {
@@ -297,6 +317,10 @@ func CreateDefaultConfig() *Config {
 		Indexer: Indexer{
 			DetectLanguages: true,
 			MaxFileSize:     1,
+		},
+		Crawler: CrawlerConfig{
+			Backend: "http",
+			Timeout: 5,
 		},
 		Hotkeys: Hotkeys{
 			Web: map[string]string{

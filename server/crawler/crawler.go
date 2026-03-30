@@ -1,0 +1,191 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
+package crawler
+
+import (
+	"context"
+	"fmt"
+	"net/url"
+	"strings"
+	"time"
+
+	"golang.org/x/net/html"
+
+	"github.com/rs/zerolog/log"
+
+	"github.com/asciimoo/hister/config"
+	"github.com/asciimoo/hister/server/indexer"
+)
+
+// Crawler is the public interface for scraping backends.
+// Crawl performs a BFS traversal starting from startURL, sending discovered
+// documents to the returned channel. The channel is closed when crawling
+// finishes or ctx is cancelled. Close must be called when the Crawler is no
+// longer needed to release backend resources.
+type Crawler interface {
+	Crawl(ctx context.Context, startURL string, v *Validator) (<-chan *indexer.Document, error)
+	Close() error
+}
+
+// fetcher is the internal interface implemented by each scraping backend.
+// fetchPage downloads rawURL and returns its HTML content together with the
+// raw href values of all anchor tags found on the page.
+type fetcher interface {
+	fetchPage(ctx context.Context, rawURL string) (htmlContent string, links []string, err error)
+	close() error
+}
+
+// baseCrawler wraps a fetcher with BFS traversal logic.
+type baseCrawler struct {
+	fetcher fetcher
+	cfg     *config.CrawlerConfig
+}
+
+// New creates a Crawler backed by the backend specified in cfg.Backend.
+// Accepted values are "chromedp" and "http" (default).
+func New(cfg *config.CrawlerConfig) (Crawler, error) {
+	switch cfg.Backend {
+	case "chromedp":
+		f, err := newChromedpFetcher(cfg)
+		if err != nil {
+			return nil, fmt.Errorf("chromedp backend: %w", err)
+		}
+		return &baseCrawler{fetcher: f, cfg: cfg}, nil
+	default:
+		f, err := newHTTPFetcher(cfg)
+		if err != nil {
+			return nil, fmt.Errorf("http backend: %w", err)
+		}
+		return &baseCrawler{fetcher: f, cfg: cfg}, nil
+	}
+}
+
+// Crawl starts a BFS crawl from startURL. It returns a channel on which
+// *indexer.Document values are sent (URL and HTML fields populated) for every
+// successfully fetched page. The channel is closed when the crawl ends.
+func (c *baseCrawler) Crawl(ctx context.Context, startURL string, v *Validator) (<-chan *indexer.Document, error) {
+	if _, err := url.Parse(startURL); err != nil {
+		return nil, fmt.Errorf("invalid start URL: %w", err)
+	}
+	ch := make(chan *indexer.Document)
+	go func() {
+		defer close(ch)
+		c.bfsCrawl(ctx, startURL, v, ch)
+	}()
+	return ch, nil
+}
+
+// Close releases resources held by the underlying backend.
+func (c *baseCrawler) Close() error {
+	return c.fetcher.close()
+}
+
+type queueItem struct {
+	rawURL string
+	depth  int
+}
+
+func (c *baseCrawler) bfsCrawl(ctx context.Context, startURL string, v *Validator, ch chan<- *indexer.Document) {
+	queue := []queueItem{{startURL, 0}}
+	seen := map[string]struct{}{startURL: {}}
+
+	for len(queue) > 0 {
+		select {
+		case <-ctx.Done():
+			return
+		default:
+		}
+
+		cur := queue[0]
+		queue = queue[1:]
+
+		parsedURL, err := url.Parse(cur.rawURL)
+		if err != nil {
+			continue
+		}
+
+		switch v.Validate(parsedURL, cur.depth) {
+		case URLStop:
+			return
+		case URLSkip:
+			continue
+		}
+
+		if c.cfg.Delay > 0 {
+			select {
+			case <-time.After(time.Duration(c.cfg.Delay) * time.Second):
+			case <-ctx.Done():
+				return
+			}
+		}
+
+		htmlContent, links, err := c.fetcher.fetchPage(ctx, cur.rawURL)
+		if err != nil {
+			log.Warn().Err(err).Str("url", cur.rawURL).Msg("crawler: failed to fetch page")
+			continue
+		}
+
+		doc := &indexer.Document{
+			URL:  cur.rawURL,
+			HTML: htmlContent,
+		}
+
+		select {
+		case ch <- doc:
+		case <-ctx.Done():
+			return
+		}
+
+		for _, link := range links {
+			abs, err := resolveURL(parsedURL, link)
+			if err != nil || abs == "" {
+				continue
+			}
+			if _, exists := seen[abs]; !exists {
+				seen[abs] = struct{}{}
+				queue = append(queue, queueItem{abs, cur.depth + 1})
+			}
+		}
+	}
+}
+
+// resolveURL turns a potentially relative href into an absolute http(s) URL
+// using base as the reference. Returns "" for non-http(s) schemes.
+func resolveURL(base *url.URL, href string) (string, error) {
+	u, err := url.Parse(href)
+	if err != nil {
+		return "", err
+	}
+	abs := base.ResolveReference(u)
+	if abs.Scheme != "http" && abs.Scheme != "https" {
+		return "", nil
+	}
+	abs.Fragment = ""
+	return abs.String(), nil
+}
+
+// extractLinks parses htmlContent and returns the raw href attribute values
+// of all <a> elements.
+func extractLinks(htmlContent string) []string {
+	doc, err := html.Parse(strings.NewReader(htmlContent))
+	if err != nil {
+		return nil
+	}
+	var links []string
+	var walk func(*html.Node)
+	walk = func(n *html.Node) {
+		if n.Type == html.ElementNode && n.Data == "a" {
+			for _, attr := range n.Attr {
+				if attr.Key == "href" {
+					links = append(links, attr.Val)
+					break
+				}
+			}
+		}
+		for c := n.FirstChild; c != nil; c = c.NextSibling {
+			walk(c)
+		}
+	}
+	walk(doc)
+	return links
+}

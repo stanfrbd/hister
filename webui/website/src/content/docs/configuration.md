@@ -38,6 +38,12 @@ indexer:
     - path: '~/notes'
       filetypes: ['txt', 'md']
 
+crawler:
+  backend: 'http'
+  timeout: 5
+  delay: 1
+  user_agent: 'Hister'
+
 hotkeys:
   web:
     '/': 'focus_search_input'
@@ -246,6 +252,68 @@ TUI keyboard shortcuts are configured in `tui.yaml` under the `hotkeys` section.
 | `tab_history`     | Switch to the History tab (view recent searches)                |
 | `tab_rules`       | Switch to the Rules tab (manage blacklist/priority/alias rules) |
 | `tab_add`         | Switch to the Add tab (manually add URLs to index)              |
+
+## `crawler` Section
+
+The `crawler` section configures the web crawler used by `hister index --recursive`.
+
+| Key               | Type              | Default | Description                                                                |
+| ----------------- | ----------------- | ------- | -------------------------------------------------------------------------- |
+| `backend`         | string            | `http`  | Scraping backend to use. One of: `http`, `chromedp`.                       |
+| `backend_options` | map               | (none)  | Backend-specific options. See [Backend Options](#crawler-backend-options). |
+| `timeout`         | int               | `5`     | Request timeout in seconds.                                                |
+| `delay`           | int               | `0`     | Seconds to wait between requests. Use to avoid overloading target servers. |
+| `user_agent`      | string            | (none)  | Custom `User-Agent` header sent with every request (both backends).        |
+| `headers`         | map[string]string | (none)  | Extra HTTP headers sent with every request (both backends).                |
+| `cookies`         | Cookie[]          | (none)  | Cookies sent with every request. See [Crawler Cookies](#crawler-cookies).  |
+
+### Crawler Backend Options
+
+The `backend_options` map passes configuration to the selected backend. Each backend validates its own options and rejects unknown keys.
+
+**`http` backend** — no backend-specific options supported.
+
+**`chromedp` backend**:
+
+| Option      | Type   | Description                                   |
+| ----------- | ------ | --------------------------------------------- |
+| `exec_path` | string | Path to the Chrome or Chromium binary to use. |
+
+```yaml
+crawler:
+  backend: 'chromedp'
+  backend_options:
+    exec_path: '/usr/bin/chromium'
+  timeout: 15
+```
+
+### Crawler Cookies
+
+Each entry in `cookies` is an object with the following keys:
+
+| Key      | Type   | Required | Description                                        |
+| -------- | ------ | -------- | -------------------------------------------------- |
+| `name`   | string | ✓        | Cookie name.                                       |
+| `value`  | string | ✓        | Cookie value.                                      |
+| `domain` | string | ✓        | Domain the cookie applies to (e.g. `example.com`). |
+| `path`   | string |          | Cookie path. Defaults to `/`.                      |
+
+### Full Crawler Example
+
+```yaml
+crawler:
+  backend: 'http'
+  timeout: 10
+  delay: 2
+  user_agent: 'Hister'
+  headers:
+    Accept-Language: 'en-US,en;q=0.9'
+  cookies:
+    - name: 'session'
+      value: 'abc123'
+      domain: 'example.com'
+      path: '/'
+```
 
 ## `sensitive_content_patterns` Section
 

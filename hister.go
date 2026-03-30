@@ -23,6 +23,7 @@ import (
 	"github.com/asciimoo/hister/config"
 	"github.com/asciimoo/hister/files"
 	"github.com/asciimoo/hister/server"
+	"github.com/asciimoo/hister/server/crawler"
 	"github.com/asciimoo/hister/server/indexer"
 	"github.com/asciimoo/hister/server/model"
 	"github.com/asciimoo/hister/ui"
@@ -252,12 +253,59 @@ var indexCmd = &cobra.Command{
 	Long:  "Index one or more URLs",
 	Args:  cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		for _, u := range args {
-			if err := indexURL(u); err != nil {
-				exit(1, "Failed to index URL: "+err.Error())
+		recursive, _ := cmd.Flags().GetBool("recursive")
+		if recursive {
+			maxDepth, _ := cmd.Flags().GetInt("max-depth")
+			maxLinks, _ := cmd.Flags().GetInt("max-links")
+			allowedDomains, _ := cmd.Flags().GetStringArray("allowed-domain")
+			excludeDomains, _ := cmd.Flags().GetStringArray("exclude-domain")
+			allowedPatterns, _ := cmd.Flags().GetStringArray("allowed-pattern")
+			excludePatterns, _ := cmd.Flags().GetStringArray("exclude-pattern")
+
+			rules := &crawler.ValidatorRules{
+				MaxDepth:        maxDepth,
+				MaxLinks:        maxLinks,
+				AllowedDomains:  allowedDomains,
+				ExcludeDomains:  excludeDomains,
+				AllowedPatterns: allowedPatterns,
+				ExcludePatterns: excludePatterns,
+			}
+			validator, err := crawler.NewValidator(rules)
+			if err != nil {
+				exit(1, "Invalid crawler rules: "+err.Error())
+			}
+			if cfg.Crawler.UserAgent == "" {
+				cfg.Crawler.UserAgent = UserAgent
+			}
+			cr, err := crawler.New(&cfg.Crawler)
+			if err != nil {
+				exit(1, "Failed to initialize crawler: "+err.Error())
+			}
+			defer cr.Close()
+
+			for _, u := range args {
+				if err := crawlAndIndex(u, cr, validator); err != nil {
+					exit(1, "Crawl failed: "+err.Error())
+				}
+			}
+		} else {
+			for _, u := range args {
+				if err := indexURL(u); err != nil {
+					exit(1, "Failed to index URL: "+err.Error())
+				}
 			}
 		}
 	},
+}
+
+func init() {
+	indexCmd.Flags().BoolP("recursive", "r", false, "Recursively crawl linked pages")
+	indexCmd.Flags().Int("max-depth", 0, "Maximum crawl depth (0 = unlimited)")
+	indexCmd.Flags().Int("max-links", 0, "Maximum number of pages to visit (0 = unlimited)")
+	indexCmd.Flags().StringArray("allowed-domain", nil, "Domain to allow during crawl (repeatable; empty = all)")
+	indexCmd.Flags().StringArray("exclude-domain", nil, "Domain to exclude during crawl (repeatable)")
+	indexCmd.Flags().StringArray("allowed-pattern", nil, "Regexp pattern URLs must match to be followed (repeatable; empty = all)")
+	indexCmd.Flags().StringArray("exclude-pattern", nil, "Regexp pattern; matching URLs are skipped (repeatable)")
 }
 
 var deleteCmd = &cobra.Command{
@@ -830,6 +878,29 @@ func indexURL(u string) error {
 	c := newClient()
 	if err := c.AddDocumentJSON(d); err != nil {
 		return fmt.Errorf("failed to send page to hister: %w", err)
+	}
+	return nil
+}
+
+func crawlAndIndex(startURL string, cr crawler.Crawler, v *crawler.Validator) error {
+	ch, err := cr.Crawl(context.Background(), startURL, v)
+	if err != nil {
+		return err
+	}
+	c := newClient()
+	for doc := range ch {
+		if err := doc.Process(nil); err != nil {
+			log.Warn().Err(err).Str("url", doc.URL).Msg("failed to process crawled document")
+			continue
+		}
+		if doc.Favicon == "" {
+			if err := doc.DownloadFavicon(UserAgent); err != nil {
+				log.Debug().Err(err).Str("url", doc.URL).Msg("failed to download favicon")
+			}
+		}
+		if err := c.AddDocumentJSON(doc); err != nil {
+			log.Warn().Err(err).Str("url", doc.URL).Msg("failed to index crawled document")
+		}
 	}
 	return nil
 }
