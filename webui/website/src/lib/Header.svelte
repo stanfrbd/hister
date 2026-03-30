@@ -1,6 +1,5 @@
 <script lang="ts">
   import { page } from '$app/state';
-  import Github from '@lucide/svelte/icons/github';
   import Menu from '@lucide/svelte/icons/menu';
   import X from '@lucide/svelte/icons/x';
   import { Button } from '@hister/components';
@@ -52,7 +51,6 @@
         rel="noopener noreferrer"
         class="bg-hister-indigo font-space border-brutal-border h-auto rounded-none border-[3px] px-5 py-2.5 text-[13px] font-semibold tracking-[1px] text-white uppercase no-underline shadow-[3px_3px_0_rgba(0,0,0,0.25)] transition-all hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0_rgba(0,0,0,0.25)]"
       >
-        <Github size={18} />
         GitHub
       </Button>
     </div>
@@ -92,7 +90,6 @@
           rel="noopener noreferrer"
           class="bg-hister-indigo font-space border-brutal-border h-auto w-fit rounded-none border-[3px] px-5 py-2.5 text-[13px] font-semibold tracking-[1px] text-white uppercase no-underline shadow-[3px_3px_0_rgba(0,0,0,0.25)]"
         >
-          <Github size={18} />
           GitHub
         </Button>
       </li>

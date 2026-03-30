@@ -1,6 +1,5 @@
 <script lang="ts">
   import ArrowRight from '@lucide/svelte/icons/arrow-right';
-  import Github from '@lucide/svelte/icons/github';
   import { Button } from '@hister/components';
 </script>
 
@@ -33,7 +32,7 @@
       class="bg-brutal-card hover:bg-brutal-card font-space border-brutal-border brutal-press-lg h-auto rounded-none border-[3px] px-10 py-5 text-lg font-bold tracking-[1.5px] text-[var(--text-primary)] uppercase no-underline md:px-14"
     >
       View on github
-      <Github size={20} />
+      <ArrowRight size={20} />
     </Button>
   </nav>
 </section>
