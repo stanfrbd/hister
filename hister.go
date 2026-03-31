@@ -180,7 +180,7 @@ var listFilesCmd = &cobra.Command{
 }
 
 var importCmd = &cobra.Command{
-	Use:   "import BROWSER_TYPE DB_PATH",
+	Use:   "import-browser [BROWSER_TYPE] [DB_PATH]",
 	Short: "Import Chrome, Firefox or auto-detect browsing history",
 	Long: `
 The Firefox URL database file is usually located at /home/[USER]/.mozilla/[PROFILE]/places.sqlite

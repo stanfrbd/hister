@@ -57,17 +57,26 @@ Examples for Chrome: (note that some parts _will_ be different for you!)
 
 ### Auto Detection
 
-Run `hister import` without any browser or path arguments, this will find histories for Firefox, Firefox Developer Edition, Zen, Waterfox, Chrome, Chromium, Brave, Vivaldi, Edge and Opera if they are in the normal places.
+Run `hister import-browser` with no arguments to auto-detect browser histories. Hister will find histories for Firefox, Firefox Developer Edition, Zen, Waterfox, Chrome, Chromium, Brave, Vivaldi, Edge and Opera if they are in the standard locations.
 
-### Manuel
+### Manual
 
-Run `hister import <browser> <path>`, where `<browser>` is either `firefox` or `chrome` (depending on which section above you followed), and `<path>` is the path determined in the previous step.
+Run `hister import-browser [browser] [path]` to target a specific browser or database file:
+
+- `[browser]` is optional: either `firefox` or `chrome`. Omit to auto-detect.
+- `[path]` is optional: path to the browser history database. Omit to use the default location for the given browser.
+
+For example:
+
+```bash
+hister import-browser firefox ~/.mozilla/firefox/abc123.default/places.sqlite
+```
 
 This will print a count of how many (unique) URLs have been detected, and ask for confirmation before proceeding (press Enter to submit your choice, `Y` being the default).
 Note that Hister doesn't print URLs it skips importing, which can happen if it is covered by a [skip rule] (TODO) or has already been indexed previously.
 
 It is okay to interrupt the importing process in any way!
-Since URLs previously indexed are not fetched again, it is possible to re-run the `hister import` command later, and it will roughly resume from where it left off.
+Since URLs previously indexed are not fetched again, it is possible to re-run the `hister import-browser` command later, and it will roughly resume from where it left off.
 (Pages that failed to be fetched won't be indexed on the server, so a new attempt will be made to fetch those.)
 
 ### Warnings
