@@ -615,7 +615,7 @@
 </script>
 
 <svelte:head>
-  <title>Hister</title>
+  <title>{query ? `${query} - Hister search` : 'Hister'}</title>
 </svelte:head>
 
 <svelte:window onkeydown={handleKeydown} onpopstate={handlePopState} />
