@@ -549,7 +549,7 @@ func Search(cfg *config.Config, q *Query) (*Results, error) {
 	}
 	matches := make([]*Document, len(res.Hits))
 	for j, v := range res.Hits {
-		matches[j] = docFromHit(v)
+		matches[j] = resFromHit(v)
 	}
 	r := &Results{
 		Total:     res.Total,
@@ -594,6 +594,37 @@ func Iterate(fn func(*Document)) {
 		}
 		latest = res.Hits[n-1].Fields["url"].(string)
 	}
+}
+
+func resFromHit(h *search.DocumentMatch) *Document {
+	d := &Document{}
+	if t, ok := h.Fragments["title"]; ok {
+		d.Title = t[0]
+	} else if s, ok := h.Fields["title"].(string); ok {
+		d.Title = s
+	}
+	if s, ok := h.Fields["url"].(string); ok {
+		d.URL = s
+	}
+	if t, ok := h.Fragments["text"]; ok {
+		d.Text = t[0]
+	}
+	if s, ok := h.Fields["favicon"].(string); ok {
+		d.Favicon = s
+	}
+	if s, ok := h.Fields["domain"].(string); ok {
+		d.Domain = s
+	}
+	if t, ok := h.Fields["added"].(float64); ok {
+		d.Added = int64(t)
+	}
+	if t, ok := h.Fields["type"].(float64); ok {
+		d.Type = types.DocType(t)
+	}
+	if t, ok := h.Fields["user_id"].(float64); ok {
+		d.UserID = uint(t)
+	}
+	return d
 }
 
 func docFromHit(h *search.DocumentMatch) *Document {
