@@ -254,6 +254,20 @@ var indexCmd = &cobra.Command{
 	Long:  "Index one or more URLs",
 	Args:  cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
+		global, _ := cmd.Flags().GetBool("global")
+		targetUserID, _ := cmd.Flags().GetUint("user-id")
+		userIDChanged := cmd.Flags().Changed("user-id")
+		if global && userIDChanged {
+			exit(1, "--global and --user-id are mutually exclusive")
+		}
+
+		var clientOpts []client.Option
+		if global {
+			clientOpts = append(clientOpts, client.WithTargetUserID(0))
+		} else if userIDChanged {
+			clientOpts = append(clientOpts, client.WithTargetUserID(targetUserID))
+		}
+
 		recursive, _ := cmd.Flags().GetBool("recursive")
 		if recursive {
 			maxDepth, _ := cmd.Flags().GetInt("max-depth")
@@ -289,13 +303,13 @@ var indexCmd = &cobra.Command{
 			}()
 
 			for _, u := range args {
-				if err := crawlAndIndex(u, cr, validator); err != nil {
+				if err := crawlAndIndex(u, cr, validator, clientOpts...); err != nil {
 					exit(1, "Crawl failed: "+err.Error())
 				}
 			}
 		} else {
 			for _, u := range args {
-				if err := indexURL(u); err != nil {
+				if err := indexURL(u, clientOpts...); err != nil {
 					exit(1, "Failed to index URL: "+err.Error())
 				}
 			}
@@ -311,6 +325,8 @@ func init() {
 	indexCmd.Flags().StringArray("exclude-domain", nil, "Domain to exclude during crawl (repeatable)")
 	indexCmd.Flags().StringArray("allowed-pattern", nil, "Regexp pattern URLs must match to be followed (repeatable; empty = all)")
 	indexCmd.Flags().StringArray("exclude-pattern", nil, "Regexp pattern; matching URLs are skipped (repeatable)")
+	indexCmd.Flags().Bool("global", false, "Make indexed documents available for all users (only for admins in multiuser mode)")
+	indexCmd.Flags().Uint("user-id", 0, "Index documents under the given user ID (only for admins in multiuser mode)")
 }
 
 var deleteCmd = &cobra.Command{
@@ -840,7 +856,7 @@ func yesNoPrompt(label string, def bool) bool {
 //	}
 //}
 
-func indexURL(u string) error {
+func indexURL(u string, clientOpts ...client.Option) error {
 	httpClient := &http.Client{
 		// Websites can be slow or unreachable, we don't want to wait too long for each of them, especially if we are indexing a lot of URLs during import.
 		Timeout: 5 * time.Second,
@@ -889,19 +905,19 @@ func indexURL(u string) error {
 			log.Warn().Err(err).Str("URL", d.URL).Msg("failed to download favicon")
 		}
 	}
-	c := newClient()
+	c := newClient(clientOpts...)
 	if err := c.AddDocumentJSON(d); err != nil {
 		return fmt.Errorf("failed to send page to hister: %w", err)
 	}
 	return nil
 }
 
-func crawlAndIndex(startURL string, cr crawler.Crawler, v *crawler.Validator) error {
+func crawlAndIndex(startURL string, cr crawler.Crawler, v *crawler.Validator, clientOpts ...client.Option) error {
 	ch, err := cr.Crawl(context.Background(), startURL, v)
 	if err != nil {
 		return err
 	}
-	c := newClient()
+	c := newClient(clientOpts...)
 	for doc := range ch {
 		if err := doc.Process(nil); err != nil {
 			log.Warn().Err(err).Str("url", doc.URL).Msg("failed to process crawled document")

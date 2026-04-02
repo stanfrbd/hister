@@ -4,15 +4,22 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 )
 
+// targetUserIDHeader is sent by admin CLI callers to request a specific user_id
+// for indexed documents. The server only honours it for admin users in
+// multiuser mode.
+const targetUserIDHeader = "X-Hister-Target-User-ID"
+
 type Client struct {
-	baseURL     string
-	httpClient  *http.Client
-	userAgent   string
-	accessToken string
+	baseURL      string
+	httpClient   *http.Client
+	userAgent    string
+	accessToken  string
+	targetUserID *uint
 }
 
 type Option func(*Client)
@@ -31,6 +38,13 @@ func WithUserAgent(ua string) Option {
 
 func WithAccessToken(token string) Option {
 	return func(c *Client) { c.accessToken = token }
+}
+
+// WithTargetUserID instructs the server to index submitted documents under the
+// given user ID instead of the authenticated caller's ID. The server only
+// honours this for admin users in multiuser mode.
+func WithTargetUserID(uid uint) Option {
+	return func(c *Client) { c.targetUserID = &uid }
 }
 
 func New(baseURL string, opts ...Option) *Client {
@@ -74,6 +88,9 @@ func (c *Client) newRequest(method, path string, body io.Reader) (*http.Request,
 	}
 	if c.accessToken != "" {
 		req.Header.Set("X-Access-Token", c.accessToken)
+	}
+	if c.targetUserID != nil {
+		req.Header.Set(targetUserIDHeader, strconv.FormatUint(uint64(*c.targetUserID), 10))
 	}
 	return req, nil
 }

@@ -751,6 +751,13 @@ func serveAdd(c *webContext) {
 	}
 	if !c.effectiveRules().IsSkip(d.URL) && !strings.HasPrefix(d.URL, c.Config.BaseURL("/")) {
 		d.UserID = c.UserID
+		if c.Config.App.UserHandling && c.IsAdmin {
+			if h := c.Request.Header.Get("X-Hister-Target-User-ID"); h != "" {
+				if uid, err := strconv.ParseUint(h, 10, 64); err == nil {
+					d.UserID = uint(uid)
+				}
+			}
+		}
 		err := indexer.Add(d)
 		log.Debug().Str("URL", d.URL).Msg("item added to index")
 		if err != nil {
