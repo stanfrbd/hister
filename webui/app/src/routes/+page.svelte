@@ -1194,9 +1194,9 @@
       </ScrollArea>
 
       <!-- Desktop-only readability panel (right column) -->
-      {#if lastResults && panelOpen}
+      {#if lastResults && panelOpen && isDesktop}
         <div
-          class="border-border-brand bg-card-surface hidden w-[45%] shrink-0 flex-col overflow-hidden border-l-[3px] md:flex"
+          class="border-border-brand bg-card-surface flex w-[45%] shrink-0 flex-col overflow-hidden border-l-[3px]"
         >
           {#if panelLoading}
             <div
