@@ -1,5 +1,9 @@
 {
   "entry": [
+    "webui/app/src/routes/**/+*.svelte",
+    "webui/app/src/routes/**/+*.ts",
+    "webui/website/src/routes/**/+*.svelte",
+    "webui/website/src/routes/**/+*.ts",
     "webui/ext/src/background/background.ts",
     "webui/ext/src/content/content.ts",
     "webui/ext/src/popup/popup.ts",

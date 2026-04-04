@@ -88,6 +88,10 @@ jobs:
   fallow:
     name: Fallow analysis
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      security-events: write
     steps:
       - name: Checkout
         uses: actions/checkout@v6.0.2
@@ -103,6 +107,16 @@ jobs:
           else
             echo "skip=false" >> "$GITHUB_OUTPUT"
           fi
+
+      - name: Set up Node
+        if: steps.changes.outputs.skip != 'true'
+        uses: actions/setup-node@v6.3.0
+        with:
+          node-version: latest
+
+      - name: Generate SvelteKit types
+        if: steps.changes.outputs.skip != 'true'
+        run: npm ci && npx -w @hister/app svelte-kit sync && npx -w @hister/website svelte-kit sync
 
       - name: Run fallow
         if: steps.changes.outputs.skip != 'true'
