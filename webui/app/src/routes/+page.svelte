@@ -295,7 +295,10 @@
     e.preventDefault();
     if (e.stopPropagation) e.stopPropagation();
     if (isDesktop) {
-      if (!panelOpen) return;
+      if (!panelOpen) {
+        panelOpen = true;
+        localStorage.setItem('hister-panel-open', 'true');
+      }
       await loadPanel(url, title);
       return;
     }
