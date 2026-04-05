@@ -13,6 +13,7 @@ import (
 	"golang.org/x/net/html"
 
 	"github.com/asciimoo/hister/server/document"
+	"github.com/asciimoo/hister/server/sanitizer"
 	"github.com/asciimoo/hister/server/types"
 )
 
@@ -37,8 +38,9 @@ func (e *GoDocExtractor) Extract(d *document.Document) (bool, error) {
 	return true, nil
 }
 
-// Preview returns the HTML of the documentation base element with all
-// relative links and image sources rewritten to absolute URLs.
+// Preview returns the sanitized HTML of the documentation base
+// element with all relative links and image sources rewritten
+// to absolute URLs.
 func (e *GoDocExtractor) Preview(d *document.Document) (types.PreviewResponse, bool, error) {
 	base, err := url.Parse(d.URL)
 	if err != nil {
@@ -48,7 +50,7 @@ func (e *GoDocExtractor) Preview(d *document.Document) (types.PreviewResponse, b
 	if err != nil {
 		return types.PreviewResponse{}, false, err
 	}
-	return types.PreviewResponse{Content: content}, false, nil
+	return types.PreviewResponse{Content: sanitizer.SanitizeHTML(content)}, false, nil
 }
 
 func extractArticle(rawHTML string, renderHTML bool, base *url.URL) (string, error) {
