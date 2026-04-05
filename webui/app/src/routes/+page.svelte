@@ -276,7 +276,7 @@
     panelLoading = true;
     panelContent = '';
     try {
-      const resp = await apiFetch(`/readable?url=${encodeURIComponent(url)}`);
+      const resp = await apiFetch(`/preview?url=${encodeURIComponent(url)}`);
       if (!resp.ok) {
         panelContent = `<p class="text-hister-rose">Failed to load readable content. Status: ${resp.status}</p>`;
       } else {
@@ -303,7 +303,7 @@
       return;
     }
     try {
-      const resp = await apiFetch(`/readable?url=${encodeURIComponent(url)}`);
+      const resp = await apiFetch(`/preview?url=${encodeURIComponent(url)}`);
       if (!resp.ok) {
         popupTitle = 'Error';
         popupContent = `<p class="text-hister-rose">Failed to load readable content. Status: ${resp.status}</p>`;

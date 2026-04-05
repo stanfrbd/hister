@@ -23,12 +23,12 @@ import (
 	"github.com/asciimoo/hister/config"
 	"github.com/asciimoo/hister/files"
 	"github.com/asciimoo/hister/server/document"
+	"github.com/asciimoo/hister/server/extractor"
 	"github.com/asciimoo/hister/server/indexer"
 	"github.com/asciimoo/hister/server/indexer/types"
 	"github.com/asciimoo/hister/server/model"
 	"github.com/asciimoo/hister/server/static"
 
-	readability "codeberg.org/readeck/go-readability/v2"
 	"github.com/gorilla/sessions"
 	"github.com/gorilla/websocket"
 	"github.com/rs/zerolog/log"
@@ -916,34 +916,22 @@ func serveGet(c *webContext) {
 	}
 }
 
-func serveReadable(c *webContext) {
+func servePreview(c *webContext) {
 	u := c.Request.URL.Query().Get("url")
 	doc := indexer.GetByURL(u)
 	if doc == nil {
 		serve500(c)
 		return
 	}
-	pu, err := url.Parse(u)
+	content, err := extractor.Preview(doc)
 	if err != nil {
+		log.Warn().Err(err).Str("url", u).Msg("failed to generate preview")
 		serve500(c)
 		return
-	}
-	r, err := readability.FromReader(strings.NewReader(doc.HTML), pu)
-	if err != nil {
-		serve500(c)
-		return
-	}
-	var htmlContent strings.Builder
-	if err := r.RenderHTML(&htmlContent); err != nil {
-		log.Warn().Err(err).Msg("failed to render readable HTML")
-	}
-	title := doc.Title
-	if r.Title() != "" {
-		title = r.Title()
 	}
 	c.JSON(map[string]string{
-		"title":   title,
-		"content": htmlContent.String(),
+		"title":   doc.Title,
+		"content": content,
 	})
 }
 

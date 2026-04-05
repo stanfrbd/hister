@@ -169,12 +169,12 @@ func init() {
 			Description:  "Add alias",
 		},
 		{
-			Name:         "Readable",
-			Path:         "/api/readable",
+			Name:         "Preview",
+			Path:         "/api/preview",
 			Method:       GET,
 			CSRFRequired: false,
-			Handler:      serveReadable,
-			Description:  "Readabilty view",
+			Handler:      servePreview,
+			Description:  "Document preview",
 		},
 		{
 			Name:         "Stats",

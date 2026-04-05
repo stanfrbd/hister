@@ -20,6 +20,7 @@ type Extractor interface {
 	Name() string
 	Match(*document.Document) bool
 	Extract(*document.Document) error
+	Preview(*document.Document) (string, error)
 }
 
 // ErrNoExtractor is returned when no extractor can handle the document.
@@ -43,6 +44,22 @@ func Extract(d *document.Document) error {
 		}
 	}
 	return ErrNoExtractor
+}
+
+// Preview returns a rendered preview of the document using the first matching
+// extractor. Returns ErrNoExtractor if none match.
+func Preview(d *document.Document) (string, error) {
+	for _, e := range extractors {
+		if e.Match(d) {
+			content, err := e.Preview(d)
+			if err != nil {
+				log.Warn().Err(err).Str("URL", d.URL).Str("Extractor", e.Name()).Msg("Failed to preview content")
+			} else {
+				return content, nil
+			}
+		}
+	}
+	return "", ErrNoExtractor
 }
 
 type defaultExtractor struct{}
@@ -108,6 +125,10 @@ out:
 	return nil
 }
 
+func (e *defaultExtractor) Preview(d *document.Document) (string, error) {
+	return d.Text, nil
+}
+
 func (e *readabilityExtractor) Name() string {
 	return "Readability"
 }
@@ -135,4 +156,21 @@ func (e *readabilityExtractor) Extract(d *document.Document) error {
 	d.Title = a.Title()
 	d.SetFaviconURL(a.Favicon())
 	return nil
+}
+
+func (e *readabilityExtractor) Preview(d *document.Document) (string, error) {
+	r := bytes.NewReader([]byte(d.HTML))
+	u, err := url.Parse(d.URL)
+	if err != nil {
+		return "", err
+	}
+	a, err := readability.FromReader(r, u)
+	if err != nil {
+		return "", err
+	}
+	var htmlContent strings.Builder
+	if err := a.RenderHTML(&htmlContent); err != nil {
+		return "", err
+	}
+	return htmlContent.String(), nil
 }
