@@ -1240,7 +1240,9 @@
               </Button>
             </div>
             <ScrollArea class="min-h-0 flex-1">
-              <div class="font-inter text-text-brand-secondary prose max-w-none p-4 text-sm">
+              <div
+                class="font-inter text-text-brand-secondary prose dark:prose-invert prose-a:text-hister-teal max-w-none p-4 text-sm"
+              >
                 {@html panelContent}
               </div>
             </ScrollArea>
