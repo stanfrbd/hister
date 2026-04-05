@@ -14,7 +14,7 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/asciimoo/hister/config"
-	"github.com/asciimoo/hister/server/indexer"
+	"github.com/asciimoo/hister/server/document"
 )
 
 // Crawler is the public interface for scraping backends.
@@ -23,7 +23,7 @@ import (
 // finishes or ctx is cancelled. Close must be called when the Crawler is no
 // longer needed to release backend resources.
 type Crawler interface {
-	Crawl(ctx context.Context, startURL string, v *Validator) (<-chan *indexer.Document, error)
+	Crawl(ctx context.Context, startURL string, v *Validator) (<-chan *document.Document, error)
 	Close() error
 }
 
@@ -62,13 +62,13 @@ func New(cfg *config.CrawlerConfig) (Crawler, error) {
 }
 
 // Crawl starts a BFS crawl from startURL. It returns a channel on which
-// *indexer.Document values are sent (URL and HTML fields populated) for every
+// *document.Document values are sent (URL and HTML fields populated) for every
 // successfully fetched page. The channel is closed when the crawl ends.
-func (c *baseCrawler) Crawl(ctx context.Context, startURL string, v *Validator) (<-chan *indexer.Document, error) {
+func (c *baseCrawler) Crawl(ctx context.Context, startURL string, v *Validator) (<-chan *document.Document, error) {
 	if _, err := url.Parse(startURL); err != nil {
 		return nil, fmt.Errorf("invalid start URL: %w", err)
 	}
-	ch := make(chan *indexer.Document)
+	ch := make(chan *document.Document)
 	go func() {
 		defer close(ch)
 		c.bfsCrawl(ctx, startURL, v, ch)
@@ -86,7 +86,7 @@ type queueItem struct {
 	depth  int
 }
 
-func (c *baseCrawler) bfsCrawl(ctx context.Context, startURL string, v *Validator, ch chan<- *indexer.Document) {
+func (c *baseCrawler) bfsCrawl(ctx context.Context, startURL string, v *Validator, ch chan<- *document.Document) {
 	queue := []queueItem{{startURL, 0}}
 	seen := map[string]struct{}{startURL: {}}
 
@@ -137,7 +137,7 @@ func (c *baseCrawler) bfsCrawl(ctx context.Context, startURL string, v *Validato
 			finalParsed = parsedURL
 		}
 
-		doc := &indexer.Document{
+		doc := &document.Document{
 			URL:  finalURL,
 			HTML: htmlContent,
 		}

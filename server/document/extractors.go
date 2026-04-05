@@ -1,4 +1,4 @@
-package indexer
+package document
 
 import (
 	"bytes"
@@ -12,6 +12,7 @@ import (
 	"golang.org/x/net/html"
 )
 
+// Extractor extracts content from a Document.
 type Extractor interface {
 	Name() string
 	Match(*Document) bool
@@ -23,6 +24,7 @@ var extractors []Extractor = []Extractor{
 	&defaultExtractor{},
 }
 
+// ErrNoExtractor is returned when no extractor can handle the document.
 var ErrNoExtractor = errors.New("no extractor found")
 
 type defaultExtractor struct{}

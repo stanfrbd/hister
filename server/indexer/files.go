@@ -12,28 +12,16 @@ import (
 
 	"github.com/asciimoo/hister/config"
 	"github.com/asciimoo/hister/files"
+	"github.com/asciimoo/hister/server/document"
 )
 
 var (
 	ErrEmptyFile    = errors.New("empty file")
 	ErrBinaryFile   = errors.New("binary file")
 	ErrFileTooLarge = errors.New("file too large")
-	ErrReadFile     = errors.New("cannot read file")
 
 	maxFileSize int64 = 1024 * 1024 // 1MB default
 )
-
-type ReadFileError struct {
-	Msg string
-}
-
-func (e *ReadFileError) Unwrap() error {
-	return ErrReadFile
-}
-
-func (e *ReadFileError) Error() string {
-	return fmt.Sprintf("%s: %s", ErrReadFile.Error(), e.Msg)
-}
 
 func IndexAll(dirs []*config.Directory) {
 	for _, dir := range dirs {
@@ -111,7 +99,7 @@ func IndexFile(path string) error {
 
 	content, err := os.ReadFile(path)
 	if err != nil {
-		return &ReadFileError{
+		return &document.ReadFileError{
 			Msg: err.Error(),
 		}
 	}
@@ -119,7 +107,7 @@ func IndexFile(path string) error {
 		return ErrBinaryFile
 	}
 
-	doc := &Document{
+	doc := &document.Document{
 		URL:   fileURL,
 		Text:  string(content),
 		Added: info.ModTime().Unix(),

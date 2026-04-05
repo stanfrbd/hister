@@ -1,4 +1,4 @@
-package indexer
+package document
 
 import (
 	"strings"
@@ -69,6 +69,7 @@ var Languages = []lingua.Language{
 	// supported by bleve but not by lingua: no, gl, in
 }
 
+// LanguageDetector detects the language of a text.
 type LanguageDetector interface {
 	DetectLanguage(string) string
 }

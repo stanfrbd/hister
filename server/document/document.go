@@ -1,4 +1,4 @@
-package indexer
+package document
 
 import (
 	"encoding/base64"
@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -33,6 +34,33 @@ type Document struct {
 	faviconURL         string
 	processed          bool
 	skipSensitiveCheck bool
+}
+
+var (
+	ErrSensitiveContent = errors.New("document contains sensitive data")
+	sensitiveContentRe  *regexp.Regexp
+)
+
+// ErrReadFile is the sentinel error for file read failures.
+var ErrReadFile = errors.New("cannot read file")
+
+// ReadFileError wraps a file read failure with a message.
+type ReadFileError struct {
+	Msg string
+}
+
+func (e *ReadFileError) Unwrap() error {
+	return ErrReadFile
+}
+
+func (e *ReadFileError) Error() string {
+	return fmt.Sprintf("%s: %s", ErrReadFile.Error(), e.Msg)
+}
+
+// SetSensitiveContentPattern sets the regexp used to detect sensitive content.
+// Call this from indexer.Init() after building the pattern from config.
+func SetSensitiveContentPattern(re *regexp.Regexp) {
+	sensitiveContentRe = re
 }
 
 func (d *Document) extractHTML() error {
@@ -167,6 +195,17 @@ func (d *Document) processFile(ld LanguageDetector, pu *url.URL) error {
 	return nil
 }
 
+// SetSkipSensitiveCheck controls whether sensitive content checks are skipped
+// during processing (e.g. during reindex with skipSensitiveChecks=true).
+func (d *Document) SetSkipSensitiveCheck(v bool) {
+	d.skipSensitiveCheck = v
+}
+
+// IsProcessed reports whether the document has already been processed.
+func (d *Document) IsProcessed() bool {
+	return d.processed
+}
+
 func (d *Document) ID() string {
 	return GetDocID(d.UserID, d.URL)
 }
@@ -176,4 +215,19 @@ func GetDocID(uid uint, url string) string {
 		return fmt.Sprintf("%d:%s", uid, url)
 	}
 	return url
+}
+
+func fullURL(base, u string) string {
+	if strings.HasPrefix(u, "data:") {
+		return u
+	}
+	pu, err := url.Parse(u)
+	if err != nil {
+		return ""
+	}
+	pb, err := url.Parse(base)
+	if err != nil {
+		return ""
+	}
+	return pb.ResolveReference(pu).String()
 }

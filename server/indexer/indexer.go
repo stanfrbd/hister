@@ -15,6 +15,7 @@ import (
 
 	"github.com/asciimoo/hister/config"
 	"github.com/asciimoo/hister/files"
+	"github.com/asciimoo/hister/server/document"
 	"github.com/asciimoo/hister/server/indexer/querybuilder"
 	"github.com/asciimoo/hister/server/indexer/types"
 	"github.com/asciimoo/hister/server/model"
@@ -41,7 +42,7 @@ type indexer struct {
 	idx               bleve.IndexAlias       // used only for Search()
 	indexers          map[string]bleve.Index // default and language specific indexers
 	dir               string
-	langDetector      LanguageDetector
+	langDetector      document.LanguageDetector
 	reindexInProgress bool
 }
 
@@ -62,13 +63,13 @@ type Query struct {
 }
 
 type Results struct {
-	Total           uint64            `json:"total"`
-	Query           *Query            `json:"query"`
-	Documents       []*Document       `json:"documents"`
-	History         []*model.URLCount `json:"history"`
-	SearchDuration  string            `json:"search_duration"`
-	QuerySuggestion string            `json:"query_suggestion"`
-	PageKey         string            `json:"page_key"`
+	Total           uint64               `json:"total"`
+	Query           *Query               `json:"query"`
+	Documents       []*document.Document `json:"documents"`
+	History         []*model.URLCount    `json:"history"`
+	SearchDuration  string               `json:"search_duration"`
+	QuerySuggestion string               `json:"query_suggestion"`
+	PageKey         string               `json:"page_key"`
 }
 
 type MultiBatch struct {
@@ -77,11 +78,9 @@ type MultiBatch struct {
 }
 
 var (
-	i                   *indexer
-	allFields           []string = []string{"url", "title", "text", "favicon", "html", "domain", "added", "type", "user_id"}
-	ErrSensitiveContent          = errors.New("document contains sensitive data")
-	ErrEmptyFilter               = errors.New("delete query must not be empty")
-	sensitiveContentRe  *regexp.Regexp
+	i          *indexer
+	allFields  []string = []string{"url", "title", "text", "favicon", "html", "domain", "added", "type", "user_id"}
+	ErrEmptyFilter      = errors.New("delete query must not be empty")
 	bleveConfig         map[string]any = map[string]any{
 		"bolt_timeout": "2s",
 		// https://github.com/blevesearch/bleve/blob/master/docs/persister.md
@@ -106,7 +105,7 @@ func Init(cfg *config.Config) error {
 	for _, v := range cfg.SensitiveContentPatterns {
 		sp = append(sp, v)
 	}
-	sensitiveContentRe = regexp.MustCompile(fmt.Sprintf("(%s)", strings.Join(sp, "|")))
+	document.SetSensitiveContentPattern(regexp.MustCompile(fmt.Sprintf("(%s)", strings.Join(sp, "|"))))
 	var err error
 	i, err = initializeIndexer(cfg.FullPath(""), cfg.Indexer.DetectLanguages)
 	if err != nil {
@@ -148,9 +147,9 @@ func initializeIndexer(basePath string, detectLanguages bool) (*indexer, error) 
 		dir: basePath,
 	}
 	if !detectLanguages {
-		i.langDetector = NewNullLanguageDetector()
+		i.langDetector = document.NewNullLanguageDetector()
 	} else {
-		i.langDetector = NewLanguageDetector()
+		i.langDetector = document.NewLanguageDetector()
 	}
 	entries, err := os.ReadDir(basePath)
 	if err != nil {
@@ -234,16 +233,16 @@ func Reindex(basePath string, rules *config.Rules, skipSensitiveChecks bool, det
 				}
 			}
 			log.Debug().Str("URL", d.URL).Msg("Indexing")
-			d.skipSensitiveCheck = skipSensitiveChecks
+			d.SetSkipSensitiveCheck(skipSensitiveChecks)
 			origDate := d.Added
 			if err := d.Process(tmpIdx.langDetector); err != nil {
-				if errors.Is(err, ErrSensitiveContent) {
+				if errors.Is(err, document.ErrSensitiveContent) {
 					log.Warn().Err(err).Str("URL", d.URL).Msg("Skipping document, sensitive content")
 					continue
-				} else if errors.Is(err, ErrNoExtractor) {
+				} else if errors.Is(err, document.ErrNoExtractor) {
 					log.Warn().Err(err).Str("URL", d.URL).Msg("Skipping document, can't extract content")
 					continue
-				} else if errors.Is(err, ErrReadFile) {
+				} else if errors.Is(err, document.ErrReadFile) {
 					log.Warn().Err(err).Str("Path", d.URL).Msg("Skipping document, can't read file")
 					continue
 				} else {
@@ -313,7 +312,7 @@ func DocumentCountByUser(userID uint) uint64 {
 	return i.TotalByUser(userID)
 }
 
-func Add(d *Document) error {
+func Add(d *document.Document) error {
 	return i.AddDocument(d)
 }
 
@@ -341,8 +340,8 @@ func (i *indexer) TotalByUser(userID uint) uint64 {
 	return res.Total
 }
 
-func (i *indexer) AddDocument(d *Document) error {
-	if !d.processed {
+func (i *indexer) AddDocument(d *document.Document) error {
+	if !d.IsProcessed() {
 		if err := d.Process(i.langDetector); err != nil {
 			return err
 		}
@@ -368,9 +367,9 @@ func GetLatestDocuments(limit int, latest string) *Results {
 	if err != nil || len(res.Hits) < 1 {
 		return nil
 	}
-	docs := make([]*Document, len(res.Hits))
+	docs := make([]*document.Document, len(res.Hits))
 	for i, h := range res.Hits {
-		d := &Document{
+		d := &document.Document{
 			Title: h.Fields["title"].(string),
 			URL:   h.Fields["url"].(string),
 			Added: int64(h.Fields["added"].(float64)),
@@ -384,7 +383,7 @@ func GetLatestDocuments(limit int, latest string) *Results {
 }
 
 func (i *indexer) getOrCreate(lang string) bleve.Index {
-	if lang == UnknownLanguage || lang == "" {
+	if lang == document.UnknownLanguage || lang == "" {
 		return i.indexers[defaultIndexerName]
 	}
 	idxName := fmt.Sprintf(langIndexerName, lang)
@@ -441,8 +440,8 @@ func (b *MultiBatch) getOrCreateBatch(name string, idx bleve.Index) *bleve.Batch
 	return b.batches[name]
 }
 
-func (b *MultiBatch) Add(d *Document) error {
-	if !d.processed {
+func (b *MultiBatch) Add(d *document.Document) error {
+	if !d.IsProcessed() {
 		if err := d.Process(i.langDetector); err != nil {
 			return err
 		}
@@ -547,7 +546,7 @@ func Search(cfg *config.Config, q *Query) (*Results, error) {
 	if err != nil {
 		return nil, err
 	}
-	matches := make([]*Document, len(res.Hits))
+	matches := make([]*document.Document, len(res.Hits))
 	for j, v := range res.Hits {
 		matches[j] = resFromHit(v)
 	}
@@ -559,7 +558,7 @@ func Search(cfg *config.Config, q *Query) (*Results, error) {
 	return r, nil
 }
 
-func GetByURL(u string) *Document {
+func GetByURL(u string) *document.Document {
 	q := query.NewTermQuery(strings.ToLower(u))
 	q.SetField("url")
 	req := bleve.NewSearchRequest(q)
@@ -572,7 +571,7 @@ func GetByURL(u string) *Document {
 	return docFromHit(res.Hits[0])
 }
 
-func Iterate(fn func(*Document)) {
+func Iterate(fn func(*document.Document)) {
 	q := query.NewMatchAllQuery()
 	req := bleve.NewSearchRequest(q)
 	req.Fields = []string{"url"}
@@ -596,8 +595,8 @@ func Iterate(fn func(*Document)) {
 	}
 }
 
-func resFromHit(h *search.DocumentMatch) *Document {
-	d := &Document{}
+func resFromHit(h *search.DocumentMatch) *document.Document {
+	d := &document.Document{}
 	if t, ok := h.Fragments["title"]; ok {
 		d.Title = t[0]
 	} else if s, ok := h.Fields["title"].(string); ok {
@@ -627,8 +626,8 @@ func resFromHit(h *search.DocumentMatch) *Document {
 	return d
 }
 
-func docFromHit(h *search.DocumentMatch) *Document {
-	d := &Document{}
+func docFromHit(h *search.DocumentMatch) *document.Document {
+	d := &document.Document{}
 	if t, ok := h.Fragments["title"]; ok {
 		d.Title = t[0]
 	} else if s, ok := h.Fields["title"].(string); ok {
@@ -701,7 +700,7 @@ func (q *Query) create() query.Query {
 func createMapping(lang string) mapping.IndexMapping {
 	im := bleve.NewIndexMapping()
 	textAnalyzer := lang
-	if lang == UnknownLanguage || lang == "" || lang == "default" {
+	if lang == document.UnknownLanguage || lang == "" || lang == "default" {
 		err := im.AddCustomAnalyzer("default", map[string]any{
 			"type":         custom.Name,
 			"char_filters": []string{},
@@ -765,21 +764,6 @@ func createMapping(lang string) mapping.IndexMapping {
 func (q *Query) ToJSON() []byte {
 	r, _ := json.Marshal(q)
 	return r
-}
-
-func fullURL(base, u string) string {
-	if strings.HasPrefix(u, "data:") {
-		return u
-	}
-	pu, err := url.Parse(u)
-	if err != nil {
-		return ""
-	}
-	pb, err := url.Parse(base)
-	if err != nil {
-		return ""
-	}
-	return pb.ResolveReference(pu).String()
 }
 
 type lipglossFormatter struct {

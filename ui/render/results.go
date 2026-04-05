@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/asciimoo/hister/server/indexer"
+	"github.com/asciimoo/hister/server/document"
 	smodel "github.com/asciimoo/hister/server/model"
 	"github.com/asciimoo/hister/ui/model"
 
@@ -150,7 +150,7 @@ func HistoryItem(m *model.Model, h *smodel.URLCount, sel bool, contentW int) str
 	return m.Styles.Item.Render(content)
 }
 
-func Document(m *model.Model, d *indexer.Document, sel bool, contentW int) string {
+func Document(m *model.Model, d *document.Document, sel bool, contentW int) string {
 	ts := m.Styles.Title
 	if sel {
 		ts = m.Styles.SelTitle

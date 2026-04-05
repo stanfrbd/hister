@@ -25,6 +25,7 @@ import (
 	"github.com/asciimoo/hister/files"
 	"github.com/asciimoo/hister/server"
 	"github.com/asciimoo/hister/server/crawler"
+	"github.com/asciimoo/hister/server/document"
 	"github.com/asciimoo/hister/server/indexer"
 	"github.com/asciimoo/hister/server/model"
 	"github.com/asciimoo/hister/ui"
@@ -141,7 +142,7 @@ var listURLsCmd = &cobra.Command{
 		initIndex()
 	},
 	Run: func(_ *cobra.Command, _ []string) {
-		indexer.Iterate(func(d *indexer.Document) {
+		indexer.Iterate(func(d *document.Document) {
 			fmt.Println(d.URL)
 		})
 	},
@@ -906,7 +907,7 @@ func indexURL(u string, clientOpts ...client.Option) error {
 		return errors.New(`failed to read response body: ` + err.Error())
 	}
 
-	d := &indexer.Document{
+	d := &document.Document{
 		URL:  u,
 		HTML: buf.String(),
 	}

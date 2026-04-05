@@ -7,10 +7,10 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/asciimoo/hister/server/indexer"
+	"github.com/asciimoo/hister/server/document"
 )
 
-func (c *Client) AddDocumentJSON(doc *indexer.Document) (err error) {
+func (c *Client) AddDocumentJSON(doc *document.Document) (err error) {
 	data, err := json.Marshal(doc)
 	if err != nil {
 		return err

@@ -22,6 +22,7 @@ import (
 
 	"github.com/asciimoo/hister/config"
 	"github.com/asciimoo/hister/files"
+	"github.com/asciimoo/hister/server/document"
 	"github.com/asciimoo/hister/server/indexer"
 	"github.com/asciimoo/hister/server/indexer/types"
 	"github.com/asciimoo/hister/server/model"
@@ -729,7 +730,7 @@ func serveAdd(c *webContext) {
 		serve500(c)
 		return
 	}
-	d := &indexer.Document{}
+	d := &document.Document{}
 	jsonData := false
 	if strings.Contains(c.Request.Header.Get("Content-Type"), "json") {
 		jsonData = true
@@ -1170,7 +1171,7 @@ type batchOp struct {
 type batchOpResult struct {
 	Status   int               `json:"status"`
 	Error    string            `json:"error,omitempty"`
-	Document *indexer.Document `json:"document,omitempty"`
+	Document *document.Document `json:"document,omitempty"`
 }
 
 type batchRequest struct {
@@ -1216,7 +1217,7 @@ func serveBatch(c *webContext) {
 				results[i] = batchOpResult{Status: http.StatusBadRequest, Error: "missing url"}
 				continue
 			}
-			d := &indexer.Document{URL: op.URL, Title: op.Title, Text: op.Text, HTML: op.HTML, Favicon: op.Favicon}
+			d := &document.Document{URL: op.URL, Title: op.Title, Text: op.Text, HTML: op.HTML, Favicon: op.Favicon}
 			if c.effectiveRules().IsSkip(d.URL) || strings.HasPrefix(d.URL, c.Config.BaseURL("/")) {
 				results[i] = batchOpResult{Status: http.StatusNotAcceptable, Error: "url skipped by rules"}
 				continue
