@@ -79,6 +79,7 @@ func init() {
 	p.AllowAttrs("src", "srcset").OnElements("img", "source")
 	p.AllowAttrs("alt").Globally()
 	p.AllowAttrs("title").Globally()
+	p.AllowAttrs("id").Globally()
 	p.RequireParseableURLs(true)
 	p.AllowDataURIImages()
 	p.AllowImages()
