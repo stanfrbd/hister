@@ -16,6 +16,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"runtime/debug"
 	"strconv"
 	"strings"
 	"time"
@@ -41,7 +42,18 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-const Version = "v0.11.0"
+const versionBase = "v0.11.0"
+
+var Version = func() string {
+	if info, ok := debug.ReadBuildInfo(); ok {
+		for _, s := range info.Settings {
+			if s.Key == "vcs.revision" && len(s.Value) >= 7 {
+				return fmt.Sprintf("%s (%s)", versionBase, s.Value[:7])
+			}
+		}
+	}
+	return versionBase
+}()
 
 var (
 	cliErrorStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("9")).Bold(true)
@@ -72,7 +84,7 @@ var (
 var rootCmd = &cobra.Command{
 	Use:     "hister",
 	Short:   "Your own search engine",
-	Long:    "hister - your own search engine",
+	Long:    "Hister - your own search engine",
 	Version: Version,
 	//Run: func(_ *cobra.Command, _ []string) {
 	//},
