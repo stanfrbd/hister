@@ -153,8 +153,11 @@ func getTokenQuery(t Token) (query.Query, bool) {
 			}
 		}
 		wcq := t.Value
-		if !strings.Contains(t.Value, "*") {
-			wcq = "*" + wcq + "*"
+		if !strings.HasPrefix(wcq, "*") {
+			wcq = "*" + wcq
+		}
+		if !strings.HasSuffix(wcq, "*") {
+			wcq = wcq + "*"
 		}
 
 		urlq := bleve.NewWildcardQuery(wcq)
