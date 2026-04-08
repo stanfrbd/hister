@@ -77,6 +77,15 @@ func GetOrCreateHistory(userID uint, q string) *History {
 	return ret
 }
 
+func DeleteHistoryURL(userID uint, url string) error {
+	subQ := DB.Table("history_links").
+		Select("history_links.id").
+		Joins("JOIN histories ON history_links.history_id = histories.id").
+		Joins("JOIN links ON history_links.link_id = links.id").
+		Where("histories.user_id = ? AND links.url = ?", userID, url)
+	return DB.Delete(&HistoryLink{}, "id in (?)", subQ).Error
+}
+
 func DeleteHistoryItem(userID uint, query, url string) error {
 	return DB.Delete(
 		&HistoryLink{},

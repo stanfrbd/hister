@@ -1136,7 +1136,11 @@ func serveDelete(c *webContext) {
 	if c.Config.App.UserHandling && !c.IsAdmin {
 		userID = &c.UserID
 	}
-	count, err := indexer.DeleteByQuery(req.Query, userID)
+	count, err := indexer.DeleteByQuery(req.Query, userID, func(url string, uid uint) {
+		if err := model.DeleteHistoryURL(uid, url); err != nil {
+			log.Warn().Err(err).Str("url", url).Msg("failed to delete history for deleted document")
+		}
+	})
 	if err != nil {
 		if errors.Is(err, indexer.ErrEmptyFilter) {
 			http.Error(c.Response, err.Error(), http.StatusBadRequest)

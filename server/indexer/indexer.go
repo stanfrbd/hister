@@ -476,7 +476,7 @@ func Delete(id string) error {
 	return nil
 }
 
-func DeleteByQuery(text string, userID *uint) (int, error) {
+func DeleteByQuery(text string, userID *uint, onDelete func(url string, userID uint)) (int, error) {
 	if strings.TrimSpace(text) == "" {
 		return 0, ErrEmptyFilter
 	}
@@ -493,7 +493,7 @@ func DeleteByQuery(text string, userID *uint) (int, error) {
 	var searchAfter []string
 	for {
 		req := bleve.NewSearchRequest(q)
-		req.Fields = []string{}
+		req.Fields = []string{"url", "user_id"}
 		req.Size = pageSize
 		req.SortBy([]string{"_id"})
 		if len(searchAfter) > 0 {
@@ -513,6 +513,18 @@ func DeleteByQuery(text string, userID *uint) (int, error) {
 		}
 		if err := batch.Save(); err != nil {
 			return count, err
+		}
+		if onDelete != nil {
+			for _, h := range res.Hits {
+				url, _ := h.Fields["url"].(string)
+				uid := uint(0)
+				if u, ok := h.Fields["user_id"].(float64); ok {
+					uid = uint(u)
+				}
+				if url != "" {
+					onDelete(url, uid)
+				}
+			}
 		}
 		count += n
 		searchAfter = res.Hits[n-1].Sort
