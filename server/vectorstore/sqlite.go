@@ -12,25 +12,8 @@ import (
 	"github.com/asciimoo/hister/config"
 
 	sqlite_vec "github.com/asg017/sqlite-vec-go-bindings/cgo"
-	// sqlite3 "github.com/mattn/go-sqlite3"
 	"github.com/rs/zerolog/log"
 )
-
-//func init() {
-//	sql.Register("sqlite3_vec", &sqlite3.SQLiteDriver{
-//		ConnectHook: func(conn *sqlite3.SQLiteConn) error {
-//			err := conn.LoadExtension("vec0", "sqlite3_vec_init")
-//			if err != nil {
-//				log.Debug().Err(err).Msg("sqlite-vec extension not loaded via vec0, trying sqlite_vec")
-//				err = conn.LoadExtension("sqlite_vec", "sqlite3_vec_init")
-//			}
-//			if err != nil {
-//				log.Debug().Err(err).Msg("sqlite-vec extension not auto-loaded; vec0 must be available")
-//			}
-//			return nil // non-fatal: we check at Init()
-//		},
-//	})
-//}
 
 type sqliteVectorStore struct {
 	db         *sql.DB
@@ -64,9 +47,24 @@ func (s *sqliteVectorStore) Init() error {
 	}
 	log.Info().Str("version", version).Msg("sqlite-vec loaded")
 
+	// Regular table for chunk metadata (text content, doc association).
+	if _, err := s.db.Exec(`CREATE TABLE IF NOT EXISTS chunk_meta (
+		chunk_key TEXT PRIMARY KEY,
+		doc_id TEXT NOT NULL,
+		chunk_idx INTEGER NOT NULL,
+		user_id INTEGER NOT NULL DEFAULT 0,
+		chunk_text TEXT NOT NULL
+	)`); err != nil {
+		return fmt.Errorf("create chunk_meta table: %w", err)
+	}
+	if _, err := s.db.Exec(`CREATE INDEX IF NOT EXISTS idx_chunk_meta_doc ON chunk_meta(doc_id)`); err != nil {
+		return fmt.Errorf("create chunk_meta doc_id index: %w", err)
+	}
+
+	// Vec0 virtual table for vector similarity search.
 	stmt := fmt.Sprintf(`CREATE VIRTUAL TABLE IF NOT EXISTS embeddings USING vec0(
 		user_id INTEGER PARTITION KEY,
-		doc_id TEXT PRIMARY KEY,
+		chunk_key TEXT PRIMARY KEY,
 		embedding FLOAT[%d]
 	)`, s.dimensions)
 	if _, err := s.db.Exec(stmt); err != nil {
@@ -75,38 +73,86 @@ func (s *sqliteVectorStore) Init() error {
 	return nil
 }
 
-func (s *sqliteVectorStore) Put(docID string, userID uint, vector []float32) error {
-	// sqlite-vec virtual tables (vec0) do not support INSERT OR REPLACE, so we
-	// delete any existing row first and then insert the new one.
-	if _, err := s.db.Exec(`DELETE FROM embeddings WHERE doc_id = ?`, docID); err != nil {
-		return fmt.Errorf("upsert embedding (delete): %w", err)
+func chunkKey(docID string, chunkIdx int) string {
+	return fmt.Sprintf("%s#%d", docID, chunkIdx)
+}
+
+func (s *sqliteVectorStore) PutChunks(docID string, userID uint, chunks []Chunk) error {
+	tx, err := s.db.Begin()
+	if err != nil {
+		return fmt.Errorf("begin transaction: %w", err)
 	}
-	blob := float32ToBlob(vector)
-	if _, err := s.db.Exec(
-		`INSERT INTO embeddings(user_id, doc_id, embedding) VALUES (?, ?, ?)`,
-		userID, docID, blob,
-	); err != nil {
-		return fmt.Errorf("upsert embedding (insert): %w", err)
+	defer func() {
+		if err != nil {
+			_ = tx.Rollback()
+		}
+	}()
+
+	// Delete all existing chunks for this document.
+	if _, err = tx.Exec(`DELETE FROM embeddings WHERE chunk_key IN (SELECT chunk_key FROM chunk_meta WHERE doc_id = ?)`, docID); err != nil {
+		return fmt.Errorf("delete old embeddings: %w", err)
+	}
+	if _, err = tx.Exec(`DELETE FROM chunk_meta WHERE doc_id = ?`, docID); err != nil {
+		return fmt.Errorf("delete old chunk_meta: %w", err)
+	}
+
+	metaStmt, err := tx.Prepare(`INSERT INTO chunk_meta(chunk_key, doc_id, chunk_idx, user_id, chunk_text) VALUES (?, ?, ?, ?, ?)`)
+	if err != nil {
+		return fmt.Errorf("prepare chunk_meta insert: %w", err)
+	}
+	defer metaStmt.Close() //nolint:errcheck
+
+	embStmt, err := tx.Prepare(`INSERT INTO embeddings(user_id, chunk_key, embedding) VALUES (?, ?, ?)`)
+	if err != nil {
+		return fmt.Errorf("prepare embeddings insert: %w", err)
+	}
+	defer embStmt.Close() //nolint:errcheck
+
+	for _, c := range chunks {
+		key := chunkKey(docID, c.Index)
+		if _, err = metaStmt.Exec(key, docID, c.Index, userID, c.Text); err != nil {
+			return fmt.Errorf("insert chunk_meta: %w", err)
+		}
+		blob := float32ToBlob(c.Embedding)
+		if _, err = embStmt.Exec(userID, key, blob); err != nil {
+			return fmt.Errorf("insert embedding: %w", err)
+		}
+	}
+	if err = tx.Commit(); err != nil {
+		return fmt.Errorf("commit chunks: %w", err)
 	}
 	return nil
 }
 
 func (s *sqliteVectorStore) Delete(docID string) error {
-	_, err := s.db.Exec(`DELETE FROM embeddings WHERE doc_id = ?`, docID)
+	tx, err := s.db.Begin()
 	if err != nil {
-		return fmt.Errorf("delete embedding: %w", err)
+		return fmt.Errorf("begin transaction: %w", err)
 	}
-	return nil
+	defer func() {
+		if err != nil {
+			_ = tx.Rollback()
+		}
+	}()
+	if _, err = tx.Exec(`DELETE FROM embeddings WHERE chunk_key IN (SELECT chunk_key FROM chunk_meta WHERE doc_id = ?)`, docID); err != nil {
+		return fmt.Errorf("delete embeddings: %w", err)
+	}
+	if _, err = tx.Exec(`DELETE FROM chunk_meta WHERE doc_id = ?`, docID); err != nil {
+		return fmt.Errorf("delete chunk_meta: %w", err)
+	}
+	return tx.Commit()
 }
 
 func (s *sqliteVectorStore) Search(vector []float32, topK int, threshold float64, userID uint) (_ []Result, err error) {
 	blob := float32ToBlob(vector)
 	rows, err := s.db.Query(
-		`SELECT doc_id, distance FROM embeddings
-		 WHERE embedding MATCH ?
-		   AND k = ?
-		   AND user_id = ?
-		 ORDER BY distance`,
+		`SELECT e.chunk_key, e.distance, COALESCE(m.doc_id, ''), COALESCE(m.chunk_idx, 0), COALESCE(m.chunk_text, '')
+		 FROM embeddings e
+		 LEFT JOIN chunk_meta m ON e.chunk_key = m.chunk_key
+		 WHERE e.embedding MATCH ?
+		   AND e.k = ?
+		   AND e.user_id = ?
+		 ORDER BY e.distance`,
 		blob, topK, userID,
 	)
 	if err != nil {
@@ -120,15 +166,18 @@ func (s *sqliteVectorStore) Search(vector []float32, topK int, threshold float64
 
 	var results []Result
 	for rows.Next() {
-		var docID string
+		var chunkKey, docID, chunkText string
+		var chunkIdx int
 		var distance float64
-		if err := rows.Scan(&docID, &distance); err != nil {
+		if err := rows.Scan(&chunkKey, &distance, &docID, &chunkIdx, &chunkText); err != nil {
 			return nil, fmt.Errorf("scan vector result: %w", err)
 		}
 		similarity := 1.0 - distance
 		if similarity >= threshold {
 			results = append(results, Result{
 				DocID:      docID,
+				ChunkIdx:   chunkIdx,
+				ChunkText:  chunkText,
 				Similarity: similarity,
 			})
 		}
@@ -139,6 +188,9 @@ func (s *sqliteVectorStore) Search(vector []float32, topK int, threshold float64
 func (s *sqliteVectorStore) Clear() error {
 	if _, err := s.db.Exec(`DELETE FROM embeddings`); err != nil {
 		return fmt.Errorf("clear embeddings: %w", err)
+	}
+	if _, err := s.db.Exec(`DELETE FROM chunk_meta`); err != nil {
+		return fmt.Errorf("clear chunk_meta: %w", err)
 	}
 	return nil
 }

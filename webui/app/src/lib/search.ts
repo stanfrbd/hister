@@ -34,6 +34,7 @@ interface SearchResult {
 export interface SemanticHit {
   doc_id: string;
   similarity: number;
+  matched_chunk?: string;
   document?: SearchResult;
 }
 

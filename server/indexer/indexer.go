@@ -73,9 +73,10 @@ type Query struct {
 
 // SemanticHit represents a document found via vector similarity search.
 type SemanticHit struct {
-	DocID      string             `json:"doc_id"`
-	Similarity float64            `json:"similarity"`
-	Document   *document.Document `json:"document,omitempty"`
+	DocID        string             `json:"doc_id"`
+	Similarity   float64            `json:"similarity"`
+	MatchedChunk string             `json:"matched_chunk,omitempty"`
+	Document     *document.Document `json:"document,omitempty"`
 }
 
 type Results struct {
@@ -370,6 +371,24 @@ func SemanticSearchEnabled() bool {
 	return i != nil && i.embedder != nil && i.vectorStore != nil
 }
 
+// embedDocumentChunks splits the document text into chunks, batch-embeds them,
+// and stores the resulting chunk vectors. Errors are logged but not propagated
+// so that Bleve indexing can still proceed.
+func embedDocumentChunks(idx *indexer, d *document.Document) {
+	text := d.Title + " " + d.Text
+	chunks, err := idx.embedder.ChunkAndEmbed(text)
+	if err != nil {
+		log.Warn().Err(err).Str("url", d.URL).Msg("chunk embedding failed, skipping vectors")
+		return
+	}
+	if len(chunks) == 0 {
+		return
+	}
+	if err := idx.vectorStore.PutChunks(d.ID(), d.UserID, chunks); err != nil {
+		log.Warn().Err(err).Str("url", d.URL).Msg("vector store write failed")
+	}
+}
+
 func Add(d *document.Document) error {
 	return i.AddDocument(d)
 }
@@ -405,13 +424,7 @@ func (i *indexer) AddDocument(d *document.Document) error {
 		}
 	}
 	if i.embedder != nil && i.vectorStore != nil {
-		text := d.Title + " " + d.Text
-		vec, err := i.embedder.Embed(text)
-		if err != nil {
-			log.Warn().Err(err).Str("url", d.URL).Msg("embedding failed, skipping vector")
-		} else if err := i.vectorStore.Put(d.ID(), d.UserID, vec); err != nil {
-			log.Warn().Err(err).Str("url", d.URL).Msg("vector store write failed")
-		}
+		embedDocumentChunks(i, d)
 	}
 	return i.getOrCreate(d.Language).Index(d.ID(), d)
 }
@@ -534,13 +547,7 @@ func (b *MultiBatch) Add(d *document.Document) error {
 		}
 	}
 	if b.indexer.embedder != nil && b.indexer.vectorStore != nil {
-		text := d.Title + " " + d.Text
-		vec, err := b.indexer.embedder.Embed(text)
-		if err != nil {
-			log.Warn().Err(err).Str("url", d.URL).Msg("embedding failed, skipping vector")
-		} else if err := b.indexer.vectorStore.Put(d.ID(), d.UserID, vec); err != nil {
-			log.Warn().Err(err).Str("url", d.URL).Msg("vector store write failed")
-		}
+		embedDocumentChunks(b.indexer, d)
 	}
 	idx := b.indexer.getOrCreate(d.Language)
 	return b.getOrCreateBatch(idx.Name(), idx).Index(d.ID(), d)
@@ -732,13 +739,38 @@ func Search(cfg *config.Config, q *Query) (*Results, error) {
 				for _, d := range matches {
 					keywordURLs[d.URL] = struct{}{}
 				}
+				// Aggregate chunk-level results by doc_id, keeping the best
+				// similarity and the text of the best-matching chunk.
+				type docHit struct {
+					similarity float64
+					chunkText  string
+				}
+				bestByDoc := make(map[string]*docHit)
+				// Preserve insertion order for stable output.
+				var docOrder []string
 				for _, vr := range vsResults {
+					if existing, ok := bestByDoc[vr.DocID]; ok {
+						if vr.Similarity > existing.similarity {
+							existing.similarity = vr.Similarity
+							existing.chunkText = vr.ChunkText
+						}
+					} else {
+						bestByDoc[vr.DocID] = &docHit{
+							similarity: vr.Similarity,
+							chunkText:  vr.ChunkText,
+						}
+						docOrder = append(docOrder, vr.DocID)
+					}
+				}
+				for _, docID := range docOrder {
+					dh := bestByDoc[docID]
 					hit := SemanticHit{
-						DocID:      vr.DocID,
-						Similarity: vr.Similarity,
+						DocID:        docID,
+						Similarity:   dh.similarity,
+						MatchedChunk: dh.chunkText,
 					}
 					// For semantic-only hits, populate the full document.
-					d := GetByURL(vr.DocID)
+					d := GetByURL(docID)
 					if d != nil {
 						if _, inKeyword := keywordURLs[d.URL]; !inKeyword {
 							hit.Document = d

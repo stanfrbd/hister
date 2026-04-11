@@ -130,6 +130,8 @@ type SemanticSearch struct {
 	EmbeddingEndpoint   string  `yaml:"embedding_endpoint" mapstructure:"embedding_endpoint"`
 	EmbeddingModel      string  `yaml:"embedding_model" mapstructure:"embedding_model"`
 	Dimensions          int     `yaml:"dimensions" mapstructure:"dimensions"`
+	MaxContextLength    int     `yaml:"max_context_length" mapstructure:"max_context_length"`
+	ChunkOverlap        int     `yaml:"chunk_overlap" mapstructure:"chunk_overlap"`
 	SimilarityThreshold float64 `yaml:"similarity_threshold" mapstructure:"similarity_threshold"`
 	ResultLimit         int     `yaml:"result_limit" mapstructure:"result_limit"`
 	SemanticWeight      float64 `yaml:"semantic_weight" mapstructure:"semantic_weight"`
@@ -380,6 +382,8 @@ func CreateDefaultConfig() *Config {
 			EmbeddingEndpoint:   "http://localhost:11434/v1/embeddings",
 			EmbeddingModel:      "qwen3-embedding:8b",
 			Dimensions:          4096,
+			MaxContextLength:    4096,
+			ChunkOverlap:        128,
 			SimilarityThreshold: 0.1,
 			ResultLimit:         50,
 			SemanticWeight:      0.4,

@@ -14,18 +14,22 @@ import (
 )
 
 // Embedder calls an OpenAI-compatible /v1/embeddings endpoint to convert text
-// into float32 vectors.
+// into float32 vectors. It also handles text chunking for long documents.
 type Embedder struct {
-	endpoint string
-	model    string
-	client   *http.Client
+	endpoint         string
+	model            string
+	client           *http.Client
+	maxContextLength int
+	chunkOverlap     int
 }
 
 // NewEmbedder creates an Embedder from the semantic search config.
 func NewEmbedder(cfg *config.SemanticSearch) *Embedder {
 	return &Embedder{
-		endpoint: cfg.EmbeddingEndpoint,
-		model:    cfg.EmbeddingModel,
+		endpoint:         cfg.EmbeddingEndpoint,
+		model:            cfg.EmbeddingModel,
+		maxContextLength: cfg.MaxContextLength,
+		chunkOverlap:     cfg.ChunkOverlap,
 		client: &http.Client{
 			Timeout: 30 * time.Second,
 		},
@@ -139,4 +143,37 @@ func toFloat32(f64 []float64) []float32 {
 		f32[i] = float32(v)
 	}
 	return f32
+}
+
+// ChunkAndEmbed splits text into overlapping chunks, batch-embeds them, and
+// returns Chunk values ready for storage. Returns nil (not an error) when the
+// text is empty.
+func (e *Embedder) ChunkAndEmbed(text string) ([]Chunk, error) {
+	textChunks := ChunkText(text, e.maxContextLength, e.chunkOverlap)
+	if len(textChunks) == 0 {
+		return nil, nil
+	}
+
+	texts := make([]string, len(textChunks))
+	for i, tc := range textChunks {
+		texts[i] = tc.Text
+	}
+
+	vectors, err := e.EmbedBatch(texts)
+	if err != nil {
+		return nil, err
+	}
+	if len(vectors) != len(textChunks) {
+		return nil, fmt.Errorf("embedding count mismatch: expected %d, got %d", len(textChunks), len(vectors))
+	}
+
+	chunks := make([]Chunk, len(textChunks))
+	for i := range textChunks {
+		chunks[i] = Chunk{
+			Index:     i,
+			Text:      textChunks[i].Text,
+			Embedding: vectors[i],
+		}
+	}
+	return chunks, nil
 }

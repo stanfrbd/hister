@@ -8,10 +8,19 @@ import (
 	"github.com/asciimoo/hister/config"
 )
 
-// Result represents a single semantic search hit.
+// Result represents a single semantic search hit at the chunk level.
 type Result struct {
 	DocID      string  `json:"doc_id"`
+	ChunkIdx   int     `json:"chunk_idx"`
+	ChunkText  string  `json:"chunk_text"`
 	Similarity float64 `json:"similarity"`
+}
+
+// Chunk holds a text chunk and its precomputed embedding, ready for storage.
+type Chunk struct {
+	Index     int
+	Text      string
+	Embedding []float32
 }
 
 // VectorStore is the interface for vector similarity backends.
@@ -19,14 +28,15 @@ type VectorStore interface {
 	// Init creates tables/extensions if missing. Safe to call on every startup.
 	Init() error
 
-	// Put upserts the embedding for a document. docID matches the Bleve document ID.
-	// userID scopes the embedding to a specific user (0 in single-user mode).
-	Put(docID string, userID uint, vector []float32) error
+	// PutChunks upserts all chunk embeddings for a document, replacing any
+	// previous chunks. docID matches the Bleve document ID (URL).
+	// userID scopes the embeddings to a specific user (0 in single-user mode).
+	PutChunks(docID string, userID uint, chunks []Chunk) error
 
-	// Delete removes the embedding for a document.
+	// Delete removes all chunk embeddings for a document.
 	Delete(docID string) error
 
-	// Search returns up to topK documents whose embeddings are closest to the
+	// Search returns up to topK chunks whose embeddings are closest to the
 	// query vector, with similarity >= threshold, scoped to the given userID.
 	Search(vector []float32, topK int, threshold float64, userID uint) ([]Result, error)
 

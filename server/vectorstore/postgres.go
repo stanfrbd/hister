@@ -37,8 +37,11 @@ func (p *pgVectorStore) Init() error {
 	log.Info().Msg("pgvector extension enabled")
 
 	stmt := fmt.Sprintf(`CREATE TABLE IF NOT EXISTS embeddings (
-		doc_id TEXT PRIMARY KEY,
+		chunk_key TEXT PRIMARY KEY,
+		doc_id TEXT NOT NULL,
+		chunk_idx INTEGER NOT NULL DEFAULT 0,
 		user_id INTEGER NOT NULL DEFAULT 0,
+		chunk_text TEXT NOT NULL DEFAULT '',
 		embedding vector(%d)
 	)`, p.dimensions)
 	if _, err := p.db.Exec(stmt); err != nil {
@@ -51,23 +54,44 @@ func (p *pgVectorStore) Init() error {
 	if err != nil {
 		return fmt.Errorf("create HNSW index: %w", err)
 	}
-	// Index on user_id for efficient filtering.
-	_, err = p.db.Exec(`CREATE INDEX IF NOT EXISTS embeddings_user_idx ON embeddings (user_id)`)
-	if err != nil {
+	if _, err := p.db.Exec(`CREATE INDEX IF NOT EXISTS embeddings_user_idx ON embeddings (user_id)`); err != nil {
 		return fmt.Errorf("create user_id index: %w", err)
+	}
+	if _, err := p.db.Exec(`CREATE INDEX IF NOT EXISTS embeddings_doc_idx ON embeddings (doc_id)`); err != nil {
+		return fmt.Errorf("create doc_id index: %w", err)
 	}
 	return nil
 }
 
-func (p *pgVectorStore) Put(docID string, userID uint, vector []float32) error {
-	vecStr := pgVectorLiteral(vector)
-	_, err := p.db.Exec(
-		`INSERT INTO embeddings(doc_id, user_id, embedding) VALUES ($1, $2, $3)
-		 ON CONFLICT (doc_id) DO UPDATE SET user_id = EXCLUDED.user_id, embedding = EXCLUDED.embedding`,
-		docID, userID, vecStr,
-	)
+func (p *pgVectorStore) PutChunks(docID string, userID uint, chunks []Chunk) error {
+	tx, err := p.db.Begin()
 	if err != nil {
-		return fmt.Errorf("upsert embedding: %w", err)
+		return fmt.Errorf("begin transaction: %w", err)
+	}
+	defer func() {
+		if err != nil {
+			_ = tx.Rollback()
+		}
+	}()
+
+	// Delete all existing chunks for this document.
+	if _, err = tx.Exec(`DELETE FROM embeddings WHERE doc_id = $1`, docID); err != nil {
+		return fmt.Errorf("delete old embeddings: %w", err)
+	}
+
+	for _, c := range chunks {
+		key := chunkKey(docID, c.Index)
+		vecStr := pgVectorLiteral(c.Embedding)
+		if _, err = tx.Exec(
+			`INSERT INTO embeddings(chunk_key, doc_id, chunk_idx, user_id, chunk_text, embedding)
+			 VALUES ($1, $2, $3, $4, $5, $6)`,
+			key, docID, c.Index, userID, c.Text, vecStr,
+		); err != nil {
+			return fmt.Errorf("insert embedding chunk: %w", err)
+		}
+	}
+	if err = tx.Commit(); err != nil {
+		return fmt.Errorf("commit chunks: %w", err)
 	}
 	return nil
 }
@@ -75,7 +99,7 @@ func (p *pgVectorStore) Put(docID string, userID uint, vector []float32) error {
 func (p *pgVectorStore) Delete(docID string) error {
 	_, err := p.db.Exec(`DELETE FROM embeddings WHERE doc_id = $1`, docID)
 	if err != nil {
-		return fmt.Errorf("delete embedding: %w", err)
+		return fmt.Errorf("delete embeddings: %w", err)
 	}
 	return nil
 }
@@ -83,7 +107,7 @@ func (p *pgVectorStore) Delete(docID string) error {
 func (p *pgVectorStore) Search(vector []float32, topK int, threshold float64, userID uint) (_ []Result, err error) {
 	vecStr := pgVectorLiteral(vector)
 	rows, err := p.db.Query(
-		`SELECT doc_id, 1 - (embedding <=> $1::vector) AS similarity
+		`SELECT doc_id, chunk_idx, chunk_text, 1 - (embedding <=> $1::vector) AS similarity
 		 FROM embeddings
 		 WHERE 1 - (embedding <=> $1::vector) >= $2
 		   AND user_id = $4
@@ -103,7 +127,7 @@ func (p *pgVectorStore) Search(vector []float32, topK int, threshold float64, us
 	var results []Result
 	for rows.Next() {
 		var r Result
-		if err := rows.Scan(&r.DocID, &r.Similarity); err != nil {
+		if err := rows.Scan(&r.DocID, &r.ChunkIdx, &r.ChunkText, &r.Similarity); err != nil {
 			return nil, fmt.Errorf("scan vector result: %w", err)
 		}
 		results = append(results, r)
