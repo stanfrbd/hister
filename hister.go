@@ -260,6 +260,11 @@ var searchCmd = &cobra.Command{
 			exit(1, "Search failed: "+err.Error())
 		}
 
+		limit, _ := cmd.Flags().GetInt("limit")
+		if limit > 0 && len(res.Documents) > limit {
+			res.Documents = res.Documents[:limit]
+		}
+
 		// docToMap converts a document to a map of all fields.
 		docToMap := func(d *document.Document) map[string]any {
 			return map[string]any{
@@ -740,6 +745,7 @@ func init() {
 
 	searchCmd.Flags().StringP("format", "f", "text", "output format: text, json, csv")
 	searchCmd.Flags().StringP("fields", "F", "", "comma-separated list of document fields to display (id, url, title, domain, score, added, language, type, text, favicon, user_id, html)")
+	searchCmd.Flags().IntP("limit", "L", 0, "maximum number of results to display (0 means no limit)")
 
 	cobra.OnInitialize(initialize)
 
