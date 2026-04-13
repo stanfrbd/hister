@@ -234,28 +234,92 @@ var searchCmd = &cobra.Command{
 			exit(1, "Search failed: "+err.Error())
 		}
 		format, _ := cmd.Flags().GetString("format")
+
+		// Parse and validate --fields.
+		var fields []string
+		if fieldsRaw, _ := cmd.Flags().GetString("fields"); fieldsRaw != "" {
+			validFields := map[string]bool{
+				"id": true, "url": true, "title": true, "domain": true, "score": true,
+				"added": true, "language": true, "type": true, "text": true,
+				"favicon": true, "user_id": true,
+			}
+			for f := range strings.SplitSeq(fieldsRaw, ",") {
+				f = strings.TrimSpace(f)
+				if f == "" {
+					continue
+				}
+				if !validFields[f] {
+					exit(1, "Unknown field: "+f+" (valid fields: id, url, title, domain, score, added, language, type, text, favicon, user_id)")
+				}
+				fields = append(fields, f)
+			}
+		}
+
+		// docToMap converts a document to a map of all fields.
+		docToMap := func(d *document.Document) map[string]any {
+			return map[string]any{
+				"id":       d.ID(),
+				"url":      d.URL,
+				"title":    d.Title,
+				"domain":   d.Domain,
+				"score":    d.Score,
+				"added":    d.Added,
+				"language": d.Language,
+				"type":     d.Type,
+				"text":     d.Text,
+				"favicon":  d.Favicon,
+				"user_id":  d.UserID,
+			}
+		}
+
+		// filterMap keeps only the requested keys; returns full map when fields is empty.
+		filterMap := func(m map[string]any) map[string]any {
+			if len(fields) == 0 {
+				return m
+			}
+			out := make(map[string]any, len(fields))
+			for _, f := range fields {
+				out[f] = m[f]
+			}
+			return out
+		}
+
 		switch format {
 		case "json":
-			enc := json.NewEncoder(os.Stdout)
-			enc.SetIndent("", "  ")
-			if err := enc.Encode(res); err != nil {
-				exit(1, "Failed to encode JSON: "+err.Error())
+			if len(fields) == 0 {
+				enc := json.NewEncoder(os.Stdout)
+				enc.SetIndent("", "  ")
+				if err := enc.Encode(res); err != nil {
+					exit(1, "Failed to encode JSON: "+err.Error())
+				}
+			} else {
+				filtered := make([]map[string]any, 0, len(res.Documents))
+				for _, d := range res.Documents {
+					filtered = append(filtered, filterMap(docToMap(d)))
+				}
+				enc := json.NewEncoder(os.Stdout)
+				enc.SetIndent("", "  ")
+				if err := enc.Encode(filtered); err != nil {
+					exit(1, "Failed to encode JSON: "+err.Error())
+				}
 			}
 		case "csv":
+			// Default column order when no --fields given.
+			csvFields := fields
+			if len(csvFields) == 0 {
+				csvFields = []string{"title", "url", "domain", "score", "added", "language", "text"}
+			}
 			w := csv.NewWriter(os.Stdout)
-			if err := w.Write([]string{"title", "url", "domain", "score", "added", "language", "text"}); err != nil {
+			if err := w.Write(csvFields); err != nil {
 				exit(1, "Failed to write CSV header: "+err.Error())
 			}
-			for _, r := range res.Documents {
-				if err := w.Write([]string{
-					r.Title,
-					r.URL,
-					r.Domain,
-					strconv.FormatFloat(r.Score, 'f', -1, 64),
-					strconv.FormatInt(r.Added, 10),
-					r.Language,
-					r.Text,
-				}); err != nil {
+			for _, d := range res.Documents {
+				m := docToMap(d)
+				row := make([]string, 0, len(csvFields))
+				for _, f := range csvFields {
+					row = append(row, fmt.Sprintf("%v", m[f]))
+				}
+				if err := w.Write(row); err != nil {
 					exit(1, "Failed to write CSV row: "+err.Error())
 				}
 			}
@@ -264,8 +328,20 @@ var searchCmd = &cobra.Command{
 				exit(1, "Failed to write CSV: "+err.Error())
 			}
 		default:
-			for _, r := range res.Documents {
-				fmt.Printf("%s\n%s\n\n", r.Title, r.URL)
+			for _, d := range res.Documents {
+				if len(fields) == 0 {
+					fmt.Printf("%s\n%s\n\n", d.Title, d.URL)
+				} else {
+					m := docToMap(d)
+					parts := make([]string, 0, len(fields))
+					for _, f := range fields {
+						parts = append(parts, fmt.Sprintf("%v", m[f]))
+					}
+					fmt.Println(strings.Join(parts, "\n"))
+					if len(fields) > 1 {
+						fmt.Println()
+					}
+				}
 			}
 		}
 	},
@@ -657,6 +733,7 @@ func init() {
 	reindexCmd.Flags().BoolP("exclude-sensitive", "x", false, "don't add documents that contain sensitive content matched by config.SensitiveContentPatterns")
 
 	searchCmd.Flags().StringP("format", "f", "text", "output format: text, json, csv")
+	searchCmd.Flags().StringP("fields", "F", "", "comma-separated list of document fields to display (id, url, title, domain, score, added, language, type, text, favicon, user_id)")
 
 	cobra.OnInitialize(initialize)
 
