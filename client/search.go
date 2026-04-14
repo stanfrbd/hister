@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 package client
 
 import (
@@ -8,22 +10,12 @@ import (
 	"github.com/asciimoo/hister/server/indexer"
 )
 
-func (c *Client) Search(query string) (_ *indexer.Results, err error) {
-	return c.SearchPage(query, "", "", false)
-}
-
-// TODO use indexer.Query as paramter
-func (c *Client) SearchPage(query, pageKey, sort string, includeHTML bool) (_ *indexer.Results, err error) {
-	u := "/search?q=" + url.QueryEscape(query)
-	if pageKey != "" {
-		u += "&page_key=" + url.QueryEscape(pageKey)
+func (c *Client) Search(q *indexer.Query) (_ *indexer.Results, err error) {
+	qJSON, err := json.Marshal(q)
+	if err != nil {
+		return nil, err
 	}
-	if sort != "" {
-		u += "&sort=" + url.QueryEscape(sort)
-	}
-	if includeHTML {
-		u += "&include_html=1"
-	}
+	u := "/search?query=" + url.QueryEscape(string(qJSON))
 	req, err := c.newRequest("GET", u, nil)
 	if err != nil {
 		return nil, err

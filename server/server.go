@@ -618,30 +618,39 @@ func serveSearch(c *webContext) {
 		log.Info().Str("Origin", origin).Msg("Invalid origin")
 		return
 	}
-	q := c.Request.URL.Query().Get("q")
-	if q != "" {
-		query := &indexer.Query{Text: q}
-		for param, field := range map[string]*int64{"date_from": &query.DateFrom, "date_to": &query.DateTo} {
-			if v := c.Request.URL.Query().Get(param); v != "" {
-				if t, err := time.Parse("2006-01-02", v); err == nil {
-					ts := t.Unix()
-					if param == "date_to" {
-						// Include the entire end date by advancing to end of day (23:59:59)
-						ts += 24*60*60 - 1
-					}
-					*field = ts
+	urlParams := c.Request.URL.Query()
+	query := &indexer.Query{}
+	if rawQuery := urlParams.Get("query"); rawQuery != "" {
+		if err := json.Unmarshal([]byte(rawQuery), query); err != nil {
+			c.Response.WriteHeader(http.StatusBadRequest)
+			return
+		}
+	}
+	if q := urlParams.Get("q"); q != "" {
+		query.Text = q
+	}
+	for param, field := range map[string]*int64{"date_from": &query.DateFrom, "date_to": &query.DateTo} {
+		if v := urlParams.Get(param); v != "" {
+			if t, err := time.Parse("2006-01-02", v); err == nil {
+				ts := t.Unix()
+				if param == "date_to" {
+					// Include the entire end date by advancing to end of day (23:59:59)
+					ts += 24*60*60 - 1
 				}
+				*field = ts
 			}
 		}
-		if pk := c.Request.URL.Query().Get("page_key"); pk != "" {
-			query.PageKey = pk
-		}
-		if s := c.Request.URL.Query().Get("sort"); s != "" {
-			query.Sort = s
-		}
-		if c.Request.URL.Query().Get("include_html") == "1" {
-			query.IncludeHTML = true
-		}
+	}
+	if pk := urlParams.Get("page_key"); pk != "" {
+		query.PageKey = pk
+	}
+	if s := urlParams.Get("sort"); s != "" {
+		query.Sort = s
+	}
+	if urlParams.Get("include_html") == "1" {
+		query.IncludeHTML = true
+	}
+	if query.Text != "" {
 		r, err := doSearch(query, c.Config, c.effectiveRules(), c.UserID)
 		if err != nil {
 			fmt.Println(err)

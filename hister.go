@@ -155,7 +155,7 @@ var listURLsCmd = &cobra.Command{
 		c := newClient()
 		pageKey := ""
 		for {
-			res, err := c.SearchPage("*", pageKey, "domain", false)
+			res, err := c.Search(&indexer.Query{Text: "*", PageKey: pageKey, Sort: "domain"})
 			if err != nil {
 				exit(1, "Failed to fetch URLs: "+err.Error())
 			}
@@ -255,7 +255,7 @@ var searchCmd = &cobra.Command{
 		}
 
 		c := newClient()
-		res, err := c.SearchPage(qs, "", "", includeHTML)
+		res, err := c.Search(&indexer.Query{Text: qs, IncludeHTML: includeHTML})
 		if err != nil {
 			exit(1, "Search failed: "+err.Error())
 		}
@@ -474,7 +474,7 @@ Non-admin users are restricted to their own documents by the server.`,
 				total   uint64
 			)
 			for {
-				res, err := c.SearchPage(args[0], pageKey, "domain", false)
+				res, err := c.Search(&indexer.Query{Text: args[0], PageKey: pageKey, Sort: "domain"})
 				if err != nil {
 					exit(1, "Failed to search: "+err.Error())
 				}
@@ -497,7 +497,7 @@ Non-admin users are restricted to their own documents by the server.`,
 			return
 		}
 		if dry {
-			res, err := c.Search(args[0])
+			res, err := c.Search(&indexer.Query{Text: args[0]})
 			if err != nil {
 				exit(1, "Failed to search: "+err.Error())
 			}
@@ -564,7 +564,7 @@ var deleteUserCmd = &cobra.Command{
 		}
 		c := newClient()
 		q := fmt.Sprintf("user_id:%d", u.ID)
-		res, err := c.Search(q)
+		res, err := c.Search(&indexer.Query{Text: q})
 		if err != nil {
 			exit(1, "Failed to check user documents: "+err.Error())
 		}
