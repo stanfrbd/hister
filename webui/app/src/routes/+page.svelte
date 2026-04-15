@@ -1028,6 +1028,13 @@
                         <Eye class="size-3" /><span>view</span>
                       </Button>
                     </div>
+                    {#if r.text}
+                      <p
+                        class="font-inter text-text-brand-secondary text-sm leading-[1.4] md:text-base"
+                      >
+                        {@html r.text}
+                      </p>
+                    {/if}
                   </div>
                 </article>
                 {#if showActionsForResult === 'history:' + r.url}
