@@ -729,7 +729,8 @@ func doSearch(query *indexer.Query, cfg *config.Config, rules *config.Rules, use
 		if doc.Type != types.Local {
 			continue
 		}
-		if cfp, cut := strings.CutPrefix(doc.URL, "file://"); cut {
+		if strings.HasPrefix(doc.URL, "file://") {
+			cfp := files.FileURLToPath(doc.URL)
 			doc.URL = cfg.BaseURL("/api/file?path=") + url.QueryEscape(cfp)
 		}
 	}
@@ -990,7 +991,7 @@ func serveFile(c *webContext) {
 		if err != nil {
 			continue
 		}
-		if strings.HasPrefix(resolvedPath, resolvedDir+"/") || resolvedPath == resolvedDir {
+		if files.HasPathPrefix(resolvedPath, resolvedDir) {
 			allowed = true
 			break
 		}

@@ -14,6 +14,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/asciimoo/hister/files"
 	"github.com/asciimoo/hister/server/types"
 
 	"github.com/rs/zerolog/log"
@@ -122,7 +123,7 @@ func (d *Document) Process(ld LanguageDetector, extractFn func(*Document) error)
 		return err
 	}
 	if pu.Scheme == "file" {
-		return d.processFile(ld, pu)
+		return d.processFile(ld)
 	}
 	if pu.Scheme == "" || pu.Host == "" {
 		return errors.New("invalid URL: missing scheme/host")
@@ -156,12 +157,13 @@ func (d *Document) Process(ld LanguageDetector, extractFn func(*Document) error)
 	return nil
 }
 
-func (d *Document) processFile(ld LanguageDetector, pu *url.URL) error {
+func (d *Document) processFile(ld LanguageDetector) error {
 	if ld == nil {
 		ld = NewNullLanguageDetector()
 	}
+	osPath := files.FileURLToPath(d.URL)
 	if d.Text == "" {
-		content, err := os.ReadFile(pu.Path)
+		content, err := os.ReadFile(osPath)
 		if err != nil {
 			return &ReadFileError{
 				Msg: err.Error(),
@@ -177,8 +179,8 @@ func (d *Document) processFile(ld LanguageDetector, pu *url.URL) error {
 	}
 	d.Type = types.Local
 	d.Domain = "local"
-	base := filepath.Base(pu.Path)
-	parent := filepath.Base(filepath.Dir(pu.Path))
+	base := filepath.Base(osPath)
+	parent := filepath.Base(filepath.Dir(osPath))
 	if parent == "." || parent == "/" {
 		d.Title = base
 	} else {

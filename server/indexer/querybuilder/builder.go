@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/asciimoo/hister/files"
 	"github.com/asciimoo/hister/server/types"
 
 	"github.com/blevesearch/bleve/v2"
@@ -192,5 +193,5 @@ func normalizeFileURL(v string) string {
 	if abs, err := filepath.Abs(v); err == nil {
 		v = abs
 	}
-	return "file://" + v
+	return files.PathToFileURL(v)
 }

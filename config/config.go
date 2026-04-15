@@ -887,7 +887,9 @@ func (d *Directory) IsMatching(name string) bool {
 	}
 	if len(d.Filetypes) > 0 {
 		ext := strings.TrimPrefix(filepath.Ext(name), ".")
-		if !slices.Contains(d.Filetypes, ext) {
+		if !slices.ContainsFunc(d.Filetypes, func(ft string) bool {
+			return strings.EqualFold(ft, ext)
+		}) {
 			return false
 		}
 	}

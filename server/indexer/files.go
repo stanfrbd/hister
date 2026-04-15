@@ -89,7 +89,7 @@ func IndexFile(path string) error {
 	if err != nil {
 		return err
 	}
-	fileURL := "file://" + absPath
+	fileURL := files.PathToFileURL(absPath)
 
 	// Skip if already indexed with the same modification time
 	existing := GetByURL(fileURL)

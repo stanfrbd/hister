@@ -34,11 +34,44 @@ func ExpandHome(path string) string {
 // Debounce so we don't spam the index as write events can file multiple times before closing a file after editing
 const debounceTime = 200 * time.Millisecond
 
+// HasPathPrefix reports whether filePath equals dirPath or is contained within it,
+// using the platform's path separator.
+func HasPathPrefix(filePath, dirPath string) bool {
+	if filePath == dirPath {
+		return true
+	}
+	return strings.HasPrefix(filePath, dirPath+string(filepath.Separator))
+}
+
+// PathToFileURL converts an absolute filesystem path into a file:// URL.
+// On Windows, paths like C:\foo\bar become file:///C:/foo/bar.
+func PathToFileURL(absPath string) string {
+	p := filepath.ToSlash(absPath)
+	if !strings.HasPrefix(p, "/") {
+		p = "/" + p
+	}
+	return "file://" + p
+}
+
+// FileURLToPath extracts an OS-native filesystem path from a file:// URL.
+// On Windows, it strips the leading slash that precedes a drive letter
+// (e.g. file:///C:/foo → C:\foo). A non-file URL is returned unchanged.
+func FileURLToPath(fileURL string) string {
+	p, ok := strings.CutPrefix(fileURL, "file://")
+	if !ok {
+		return fileURL
+	}
+	if len(p) >= 3 && p[0] == '/' && p[2] == ':' {
+		p = p[1:]
+	}
+	return filepath.FromSlash(p)
+}
+
 // FindMatchingDir returns the Directory config whose expanded path contains filePath, or nil.
 func FindMatchingDir(dirs []*config.Directory, filePath string) *config.Directory {
 	for i := range dirs {
 		dirPath := filepath.Clean(ExpandHome(dirs[i].Path))
-		if strings.HasPrefix(filePath, dirPath+"/") || filePath == dirPath {
+		if HasPathPrefix(filePath, dirPath) {
 			return dirs[i]
 		}
 	}
