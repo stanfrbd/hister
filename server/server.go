@@ -721,6 +721,18 @@ func doSearch(query *indexer.Query, cfg *config.Config, rules *config.Rules, use
 	hr, err := model.GetURLsByQuery(userID, oq)
 	if err == nil && len(hr) > 0 {
 		res.History = hr
+		priorityURLs := make(map[string]struct{}, len(hr))
+		for _, h := range hr {
+			priorityURLs[h.URL] = struct{}{}
+		}
+		filtered := res.Documents[:0]
+		for _, d := range res.Documents {
+			if _, ok := priorityURLs[d.URL]; ok {
+				continue
+			}
+			filtered = append(filtered, d)
+		}
+		res.Documents = filtered
 	}
 	if oq != "" {
 		res.QuerySuggestion = model.GetQuerySuggestion(userID, oq)
