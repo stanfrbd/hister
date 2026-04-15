@@ -59,10 +59,47 @@
         Restart = "on-failure";
         User = config.services.hister.user;
         Group = config.services.hister.group;
-        StateDirectory = "hister";
+        StateDirectory = lib.mkIf (config.services.hister.dataDir == null) "hister";
         EnvironmentFile = lib.mkIf (
           config.services.hister.environmentFile != null
         ) config.services.hister.environmentFile;
+
+        AmbientCapabilities = lib.mkIf (
+          config.services.hister.port != null && config.services.hister.port < 1024
+        ) [ "CAP_NET_BIND_SERVICE" ];
+        CapabilityBoundingSet = lib.mkIf (
+          config.services.hister.port == null || config.services.hister.port >= 1024
+        ) [ "" ];
+
+        NoNewPrivileges = true;
+        ProtectSystem = "strict";
+        ProtectHome = true;
+        PrivateTmp = true;
+        PrivateDevices = true;
+        ProtectKernelTunables = true;
+        ProtectKernelModules = true;
+        ProtectKernelLogs = true;
+        ProtectControlGroups = true;
+        ProtectClock = true;
+        ProtectHostname = true;
+        ProtectProc = "invisible";
+        ProcSubset = "pid";
+        LockPersonality = true;
+        RestrictNamespaces = true;
+        RestrictRealtime = true;
+        RestrictSUIDSGID = true;
+        RestrictAddressFamilies = [
+          "AF_INET"
+          "AF_INET6"
+          "AF_UNIX"
+        ];
+        SystemCallArchitectures = "native";
+        SystemCallFilter = [
+          "@system-service"
+          "~@privileged"
+        ];
+        MemoryDenyWriteExecute = true;
+        UMask = "0077";
       };
     };
 
