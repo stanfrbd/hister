@@ -213,7 +213,6 @@ func registerEndpoints(cfg *config.Config) http.Handler {
 	mux.HandleFunc("GET /static/", createHandler(cfg, serveStatic))
 	mux.HandleFunc("GET /favicon.ico", createHandler(cfg, serveFavicon))
 	mux.HandleFunc("GET /opensearch.xml", createHandler(cfg, serveOpensearch))
-	mux.HandleFunc("GET /suggest", createHandler(cfg, serveSuggest))
 	mux.HandleFunc("/", createHandler(cfg, serveSPA))
 	// If base_url contains a non-root path prefix (e.g. https://x.com/subfolder),
 	// accept requests both with and without that prefix.
@@ -1121,8 +1120,13 @@ func serveSuggest(c *webContext) {
 			}
 		}
 	}
+	jr, err := json.Marshal([]any{q, suggestions})
+	if err != nil {
+		log.Warn().Err(err).Msg("failed to marshal suggest response")
+		return
+	}
 	c.Response.Header().Set("Content-Type", "application/x-suggestions+json")
-	if err := json.NewEncoder(c.Response).Encode([]any{q, suggestions}); err != nil {
+	if _, err := c.Response.Write(jr); err != nil {
 		log.Warn().Err(err).Msg("failed to write suggest response")
 	}
 }

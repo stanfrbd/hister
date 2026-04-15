@@ -67,6 +67,14 @@ func init() {
 			Handler:      serveSearch,
 			Description:  "Search websocket endpoint",
 		},
+		{
+			Name:         "Suggest",
+			Path:         "/suggest",
+			Method:       GET,
+			CSRFRequired: false,
+			Handler:      serveSuggest,
+			Description:  "OpenSearch suggestions endpoint",
+		},
 		// tmp added for backward compatibility
 		{
 			Name:         "Add",
