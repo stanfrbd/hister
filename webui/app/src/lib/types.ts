@@ -6,4 +6,5 @@ export interface HistoryItem {
   updated_at?: string;
   added?: number;
   favicon?: string;
+  text?: string;
 }

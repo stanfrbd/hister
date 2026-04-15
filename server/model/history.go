@@ -35,6 +35,7 @@ type HistoryLink struct {
 type URLCount struct {
 	URL   string `json:"url"`
 	Title string `json:"title"`
+	Text  string `gorm:"-" json:"text,omitempty"`
 	Count uint   `json:"count"`
 }
 
