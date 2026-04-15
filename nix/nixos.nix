@@ -21,6 +21,15 @@
       default = "hister";
       description = "Group under which Hister runs.";
     };
+
+    openFirewall = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      description = ''
+        Whether to open `services.hister.port` in the firewall. Has no
+        effect if `port` is null.
+      '';
+    };
   };
 
   config = lib.mkIf config.services.hister.enable {
@@ -57,8 +66,8 @@
       };
     };
 
-    networking.firewall.allowedTCPPorts = lib.mkIf (config.services.hister.port != null) [
-      config.services.hister.port
-    ];
+    networking.firewall.allowedTCPPorts = lib.mkIf (
+      config.services.hister.openFirewall && config.services.hister.port != null
+    ) [ config.services.hister.port ];
   };
 }
