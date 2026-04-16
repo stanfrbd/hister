@@ -17,6 +17,7 @@
     openURL,
   } from '$lib/search';
   import { fetchConfig, apiFetch, getUserId } from '$lib/api';
+  import { showHelp } from '$lib/stores';
   import type { SearchResults } from '$lib/search';
   import { animate } from 'animejs';
   import { Input } from '@hister/components/ui/input';
@@ -118,7 +119,6 @@
   let isDesktop = $state(false);
   let panelOpen = $state(true);
 
-  let showHelp = $state(false);
   let resultsShown = $state(false);
 
   let contextMenuSearch: string | null = $state(null);
@@ -457,12 +457,12 @@
   };
 
   function showHotkeys(e?: KeyboardEvent, isInputFocus?: boolean) {
-    if (showHelp) {
-      showHelp = false;
+    if ($showHelp) {
+      $showHelp = false;
       return;
     }
     if (!isInputFocus) {
-      showHelp = true;
+      $showHelp = true;
     }
   }
 
@@ -472,8 +472,8 @@
       document.activeElement instanceof HTMLTextAreaElement;
     keyHandler?.handle(e, isInputFocus);
     if (e.key === 'Escape') {
-      if (showHelp) {
-        showHelp = false;
+      if ($showHelp) {
+        $showHelp = false;
         e.preventDefault();
         return;
       }
@@ -783,7 +783,7 @@
   </Dialog.Content>
 </Dialog.Root>
 
-<Dialog.Root bind:open={showHelp}>
+<Dialog.Root bind:open={$showHelp}>
   <Dialog.Content
     showCloseButton={false}
     class="border-border-brand bg-card-surface max-w-md gap-0 overflow-hidden rounded-none border-[3px] p-0 shadow-[6px_6px_0px_var(--hister-indigo)]"
@@ -822,19 +822,6 @@
     </Card.Footer>
   </Dialog.Content>
 </Dialog.Root>
-
-<Button
-  variant="outline"
-  size="icon"
-  class="bg-card-surface border-brutal-border text-text-brand-muted hover:border-hister-indigo hover:text-hister-indigo shadow-brutal hover:shadow-brutal-sm fixed right-6 bottom-14 z-30 hidden rounded-none border-[3px] transition-all hover:translate-x-[2px] hover:translate-y-[2px] md:inline-flex"
-  onclick={() => {
-    showHelp = !showHelp;
-  }}
-  title="Keyboard shortcuts (?)"
-  aria-label="Show keyboard shortcuts"
->
-  <Keyboard class="size-4" />
-</Button>
 
 {#if isSearching}
   <div class="flex min-h-0 flex-1 flex-col">

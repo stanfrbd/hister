@@ -2,9 +2,10 @@
   import { page } from '$app/stores';
   import { ModeWatcher, toggleMode, mode } from 'mode-watcher';
   import { Button } from '@hister/components/ui/button';
-  import { Sun, Moon, LogIn, LogOut, UserRound } from 'lucide-svelte';
+  import { Sun, Moon, LogIn, LogOut, UserRound, Keyboard } from 'lucide-svelte';
   import '../style.css';
   import { fetchConfig, logout, resetConfig, type AppConfig } from '$lib/api';
+  import { showHelp } from '$lib/stores';
 
   let { children } = $props();
 
@@ -137,5 +138,17 @@
     >
       {#if mode.current === 'dark'}<Sun class="size-5" />{:else}<Moon class="size-5" />{/if}
     </Button>
+    {#if $page.url.pathname === '/'}
+      <Button
+        variant="ghost"
+        size="icon"
+        class="text-text-brand-muted hover:text-hister-indigo size-8 shrink-0 transition-all hover:scale-110"
+        title="Keyboard shortcuts (?)"
+        aria-label="Show keyboard shortcuts"
+        onclick={() => ($showHelp = !$showHelp)}
+      >
+        <Keyboard class="size-5" />
+      </Button>
+    {/if}
   </footer>
 </div>
