@@ -20,6 +20,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	_ "time/tzdata"
 
 	"github.com/asciimoo/hister/client"
 	"github.com/asciimoo/hister/config"
