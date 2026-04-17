@@ -8,6 +8,7 @@ const sleepIncrementRatio = 2;
 // URL that was rejected by the server with a 406 (skip rule match).
 // Cleared when the page navigates to a different URL.
 let skippedUrl: string | null = null;
+let updateTimer: ReturnType<typeof setTimeout> | null = null;
 
 // @ts-ignore
 var isFirefox = typeof InstallTrigger !== 'undefined';
@@ -34,6 +35,13 @@ if (isFirefox) {
 // not on window). Falls back to polling for browsers without it.
 if (typeof window.navigation !== 'undefined') {
   window.navigation.addEventListener('navigatesuccess', update);
+}
+
+function scheduleUpdate() {
+  if (updateTimer !== null) {
+    clearTimeout(updateTimer);
+  }
+  updateTimer = setTimeout(update, sleepTime);
 }
 
 function extract(sendResponse, actionType, force) {
@@ -70,7 +78,7 @@ function extract(sendResponse, actionType, force) {
     // Always start polling for URL/content changes, even if the initial
     // submission failed (e.g. skip rule). The page may navigate to a
     // non-skipped URL later (SPA).
-    setTimeout(update, sleepTime);
+    scheduleUpdate();
   });
 }
 
@@ -90,7 +98,7 @@ function update() {
     d = d2;
     if (d2.url === skippedUrl) {
       // URL is still server-side skipped; don't resubmit.
-      setTimeout(update, sleepTime);
+      scheduleUpdate();
       return;
     }
     skippedUrl = null;
@@ -102,7 +110,7 @@ function update() {
   } else {
     sleepTime *= sleepIncrementRatio;
   }
-  setTimeout(update, sleepTime);
+  scheduleUpdate();
 }
 
 // Get message from background page
