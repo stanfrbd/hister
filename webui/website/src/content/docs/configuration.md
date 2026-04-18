@@ -44,6 +44,17 @@ crawler:
   delay: 1
   user_agent: 'Hister'
 
+semantic_search:
+  enable: false
+  embedding_endpoint: 'http://localhost:11434/v1/embeddings'
+  embedding_model: 'qwen3-embedding:8b'
+  dimensions: 4096
+  max_context_length: 4096
+  chunk_overlap: 128
+  similarity_threshold: 0.1
+  result_limit: 50
+  semantic_weight: 0.4
+
 hotkeys:
   web:
     '/': 'focus_search_input'
@@ -106,6 +117,48 @@ server:
 ```
 
 Hister uses the standard PostgreSQL DSN key=value format. Adjust `host`, `user`, `password`, `dbname`, `port`, `sslmode`, and `TimeZone` to match your setup.
+
+## Semantic Search
+
+Hister can augment keyword search with vector similarity search. When enabled, every indexed document is split into overlapping text chunks, each chunk is converted to a floating-point vector by an external embedding model, and the vectors are stored alongside the main index. At search time the query is also embedded and the closest chunks are retrieved, then merged with keyword results and re-ranked.
+
+Semantic search is **opt-in** and disabled by default. It requires an OpenAI-compatible embeddings endpoint such as [Ollama](https://ollama.com), a local [llama.cpp](https://github.com/ggml-org/llama.cpp) server, or the OpenAI API itself.
+
+| Key                    | Type   | Default                                | Description                                                                                                                                |
+| ---------------------- | ------ | -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `enable`               | bool   | `false`                                | Enable or disable semantic search. All other keys are ignored when `false`.                                                                |
+| `embedding_endpoint`   | string | `http://localhost:11434/v1/embeddings` | URL of the OpenAI-compatible `/v1/embeddings` endpoint.                                                                                    |
+| `embedding_model`      | string | `qwen3-embedding:8b`                   | Model name passed in the embedding request. Must match a model served by your endpoint.                                                    |
+| `dimensions`           | int    | `4096`                                 | Vector dimensionality. Must match the output of the chosen model.                                                                          |
+| `max_context_length`   | int    | `4096`                                 | Maximum number of tokens per text chunk sent to the embedding model.                                                                       |
+| `chunk_overlap`        | int    | `128`                                  | Number of tokens shared between consecutive chunks. Helps preserve context across chunk boundaries.                                        |
+| `similarity_threshold` | float  | `0.1`                                  | Minimum cosine similarity score for a chunk to be included in results. Raise this to surface only highly relevant matches.                 |
+| `result_limit`         | int    | `50`                                   | Maximum number of semantic hits retrieved per query.                                                                                       |
+| `semantic_weight`      | float  | `0.4`                                  | Weight applied to the semantic score when merging with keyword scores (0.0 = keyword only, 1.0 = semantic only). Adjustable in the web UI. |
+
+### Vector Storage Backends
+
+The vector store backend is chosen automatically based on `server.database`:
+
+- **SQLite** (default) stores vectors in a separate `vectors.sqlite3` file in the same directory as the main database, using the [sqlite-vec](https://github.com/asg017/sqlite-vec) extension. No extra setup required.
+- **PostgreSQL** stores vectors in the same database as the main data using the [pgvector](https://github.com/pgvector/pgvector) extension. Make sure `pgvector` is installed and enabled (`CREATE EXTENSION vector;`) before starting Hister.
+
+### Example
+
+```yaml
+semantic_search:
+  enable: true
+  embedding_endpoint: 'http://localhost:11434/v1/embeddings'
+  embedding_model: 'nomic-embed-text'
+  dimensions: 768
+  max_context_length: 512
+  chunk_overlap: 50
+  similarity_threshold: 0.5
+  result_limit: 10
+  semantic_weight: 0.4
+```
+
+The example above uses [nomic-embed-text](https://ollama.com/library/nomic-embed-text) via Ollama, which produces 768-dimensional vectors and fits well in a 512-token context window.
 
 ## TUI Settings
 
