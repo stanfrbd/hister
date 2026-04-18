@@ -11,7 +11,7 @@ import (
 
 	"github.com/asciimoo/hister/config"
 
-	sqlite_vec "github.com/asg017/sqlite-vec-go-bindings/cgo"
+	"github.com/asciimoo/hister/server/vectorstore/sqlitevec"
 	"github.com/rs/zerolog/log"
 )
 
@@ -21,7 +21,7 @@ type sqliteVectorStore struct {
 }
 
 func newSQLite(cfg *config.Config) (VectorStore, error) {
-	sqlite_vec.Auto()
+	sqlitevec.Auto()
 	dbPath := cfg.FullPath(cfg.Server.Database)
 	dir := filepath.Dir(dbPath)
 	vecDBPath := filepath.Join(dir, "vectors.sqlite3")

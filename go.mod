@@ -6,7 +6,6 @@ require (
 	codeberg.org/readeck/go-readability/v2 v2.1.1
 	github.com/PuerkitoBio/goquery v1.12.0
 	github.com/asciimoo/lingua-go v0.15.0
-	github.com/asg017/sqlite-vec-go-bindings v0.1.6
 	github.com/blevesearch/bleve/v2 v2.5.7
 	github.com/charmbracelet/bubbles v1.0.0
 	github.com/charmbracelet/bubbletea v1.3.10
