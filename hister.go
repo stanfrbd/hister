@@ -865,6 +865,7 @@ var crawlDeleteCmd = &cobra.Command{
 }
 
 var reindexCmd = &cobra.Command{
+	Use:   "reindex",
 	Short: "Reindex",
 	Long:  `Recreate index`,
 	Run: func(cmd *cobra.Command, args []string) {
