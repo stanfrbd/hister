@@ -64,6 +64,9 @@ func (p *pgVectorStore) Init() error {
 }
 
 func (p *pgVectorStore) PutChunks(docID string, userID uint, chunks []Chunk) error {
+	if len(chunks) == 0 {
+		return nil
+	}
 	tx, err := p.db.Begin()
 	if err != nil {
 		return fmt.Errorf("begin transaction: %w", err)
