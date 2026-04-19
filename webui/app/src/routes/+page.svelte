@@ -1268,7 +1268,7 @@
                         data-readable
                         variant="link"
                         size="sm"
-                        class="text-hister-indigo h-auto shrink-0 gap-0.5 p-0 text-xs font-medium md:text-sm"
+                        class="text-hister-indigo h-auto shrink-0 cursor-pointer gap-0.5 p-0 text-xs font-medium md:text-sm"
                         onclick={(e) => {
                           highlightIdx = i;
                           openReadable(e, r.url, r.title || '*title*');
@@ -1416,7 +1416,7 @@
                         data-readable
                         variant="link"
                         size="sm"
-                        class="text-hister-indigo h-auto shrink-0 gap-0.5 p-0 text-xs font-medium md:text-sm"
+                        class="text-hister-indigo h-auto shrink-0 cursor-pointer gap-0.5 p-0 text-xs font-medium md:text-sm"
                         onclick={(e) => {
                           highlightIdx = idx;
                           openReadable(e, r.url, r.title || '*title*');
