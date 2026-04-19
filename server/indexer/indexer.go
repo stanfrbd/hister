@@ -872,6 +872,7 @@ func resFromHit(h *search.DocumentMatch) *document.Document {
 	if t, ok := h.Fields["user_id"].(float64); ok {
 		d.UserID = uint(t)
 	}
+	d.Score = h.Score
 	for k, v := range h.Fields {
 		if mk, found := strings.CutPrefix(k, "metadata."); found {
 			if d.Metadata == nil {
