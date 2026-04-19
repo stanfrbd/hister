@@ -34,6 +34,7 @@ type Config struct {
 	Server                   Server                `yaml:"server" mapstructure:"server"`
 	Indexer                  Indexer               `yaml:"indexer" mapstructure:"indexer"`
 	Crawler                  CrawlerConfig         `yaml:"crawler" mapstructure:"crawler"`
+	SemanticSearch           SemanticSearch        `yaml:"semantic_search" mapstructure:"semantic_search"`
 	Hotkeys                  Hotkeys               `yaml:"hotkeys" mapstructure:"hotkeys"`
 	TUI                      TUI                   `yaml:"-" mapstructure:"tui"`
 	SensitiveContentPatterns map[string]string     `yaml:"sensitive_content_patterns" mapstructure:"sensitive_content_patterns"`
@@ -121,6 +122,23 @@ type Rule struct {
 type Extractor struct {
 	Enable  bool           `yaml:"enable" mapstructure:"enable"`
 	Options map[string]any `yaml:"options" mapstructure:"options"`
+}
+
+// SemanticSearch holds configuration for optional vector similarity search.
+type SemanticSearch struct {
+	Enable              bool              `yaml:"enable" mapstructure:"enable"`
+	EmbeddingEndpoint   string            `yaml:"embedding_endpoint" mapstructure:"embedding_endpoint"`
+	EmbeddingModel      string            `yaml:"embedding_model" mapstructure:"embedding_model"`
+	APIKey              string            `yaml:"api_key" mapstructure:"api_key"`
+	Headers             map[string]string `yaml:"headers" mapstructure:"headers"`
+	Dimensions          int               `yaml:"dimensions" mapstructure:"dimensions"`
+	MaxContextLength    int               `yaml:"max_context_length" mapstructure:"max_context_length"`
+	ChunkOverlap        int               `yaml:"chunk_overlap" mapstructure:"chunk_overlap"`
+	QueryPrefix         string            `yaml:"query_prefix" mapstructure:"query_prefix"`
+	DocumentPrefix      string            `yaml:"document_prefix" mapstructure:"document_prefix"`
+	SimilarityThreshold float64           `yaml:"similarity_threshold" mapstructure:"similarity_threshold"`
+	ResultLimit         int               `yaml:"result_limit" mapstructure:"result_limit"`
+	SemanticWeight      float64           `yaml:"semantic_weight" mapstructure:"semantic_weight"`
 }
 
 // DBTypedef represents the type of database being used.
@@ -363,6 +381,21 @@ func CreateDefaultConfig() *Config {
 			"ssh_private_key":     `-----BEGIN OPENSSH PRIVATE KEY-----`,
 			"pgp_private_key":     `-----BEGIN PGP PRIVATE KEY BLOCK-----`,
 		},
+		SemanticSearch: SemanticSearch{
+			Enable:              false,
+			EmbeddingEndpoint:   "http://localhost:11434/v1/embeddings",
+			EmbeddingModel:      "qwen3-embedding:8b",
+			APIKey:              "",
+			Headers:             map[string]string{},
+			Dimensions:          4096,
+			MaxContextLength:    4096,
+			ChunkOverlap:        128,
+			QueryPrefix:         "query: ",
+			DocumentPrefix:      "",
+			SimilarityThreshold: 0.1,
+			ResultLimit:         50,
+			SemanticWeight:      0.4,
+		},
 	}
 }
 
@@ -435,6 +468,9 @@ func (c *Config) init() error {
 		}
 	}
 	if err := c.Hotkeys.Validate(); err != nil {
+		return err
+	}
+	if err := c.SemanticSearch.Validate(); err != nil {
 		return err
 	}
 	sPath := c.FullPath(secretKeyFilename)
@@ -842,6 +878,25 @@ func (r *Rules) ResolveAliases(s string) string {
 		return s
 	}
 	return strings.Join(sp, " ")
+}
+
+func (s SemanticSearch) Validate() error {
+	if !s.Enable {
+		return nil
+	}
+	if s.EmbeddingEndpoint == "" {
+		return errors.New("semantic_search.embedding_endpoint must not be empty when semantic search is enabled")
+	}
+	if s.EmbeddingModel == "" {
+		return errors.New("semantic_search.embedding_model must not be empty when semantic search is enabled")
+	}
+	if s.Dimensions <= 0 {
+		return fmt.Errorf("semantic_search.dimensions must be a positive integer, got %d", s.Dimensions)
+	}
+	if s.MaxContextLength <= 0 {
+		return fmt.Errorf("semantic_search.max_context_length must be a positive integer, got %d", s.MaxContextLength)
+	}
+	return nil
 }
 
 func (h Hotkeys) Validate() error {

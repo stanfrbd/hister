@@ -11,6 +11,7 @@ import (
 	"regexp"
 	"runtime"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/asciimoo/hister/config"
@@ -20,6 +21,7 @@ import (
 	"github.com/asciimoo/hister/server/indexer/querybuilder"
 	"github.com/asciimoo/hister/server/model"
 	"github.com/asciimoo/hister/server/types"
+	"github.com/asciimoo/hister/server/vectorstore"
 
 	"github.com/blevesearch/bleve/v2"
 	"github.com/blevesearch/bleve/v2/analysis/analyzer/custom"
@@ -45,6 +47,9 @@ type indexer struct {
 	dir               string
 	langDetector      document.LanguageDetector
 	reindexInProgress bool
+	embedder          *vectorstore.Embedder
+	vectorStore       vectorstore.VectorStore
+	embedWg           sync.WaitGroup // tracks in-flight async embeddings
 }
 
 const (
@@ -53,16 +58,27 @@ const (
 )
 
 type Query struct {
-	Text        string `json:"text"`
-	Highlight   string `json:"highlight"`
-	Limit       int    `json:"limit"`
-	Sort        string `json:"sort"`
-	DateFrom    int64  `json:"date_from"`
-	DateTo      int64  `json:"date_to"`
-	UserID      uint   `json:"user_id"`
-	PageKey     string `json:"page_key"`
-	IncludeHTML bool   `json:"include_html"`
-	cfg         *config.Config
+	Text              string  `json:"text"`
+	Highlight         string  `json:"highlight"`
+	Limit             int     `json:"limit"`
+	Sort              string  `json:"sort"`
+	DateFrom          int64   `json:"date_from"`
+	DateTo            int64   `json:"date_to"`
+	UserID            uint    `json:"user_id"`
+	SemanticEnabled   bool    `json:"semantic_enabled"`
+	SemanticThreshold float64 `json:"semantic_threshold"`
+	SemanticWeight    float64 `json:"semantic_weight"`
+	PageKey           string  `json:"page_key"`
+	IncludeHTML       bool    `json:"include_html"`
+	cfg               *config.Config
+}
+
+// SemanticHit represents a document found via vector similarity search.
+type SemanticHit struct {
+	DocID        string             `json:"doc_id"`
+	Similarity   float64            `json:"similarity"`
+	MatchedChunk string             `json:"matched_chunk,omitempty"`
+	Document     *document.Document `json:"document,omitempty"`
 }
 
 type Results struct {
@@ -73,6 +89,8 @@ type Results struct {
 	SearchDuration  string               `json:"search_duration"`
 	QuerySuggestion string               `json:"query_suggestion"`
 	PageKey         string               `json:"page_key"`
+	SemanticHits    []SemanticHit        `json:"semantic_hits,omitempty"`
+	SemanticEnabled bool                 `json:"semantic_enabled"`
 }
 
 type MultiBatch struct {
@@ -114,6 +132,18 @@ func Init(cfg *config.Config) error {
 	i, err = initializeIndexer(cfg.FullPath(""), cfg.Indexer.DetectLanguages)
 	if err != nil {
 		return err
+	}
+	if cfg.SemanticSearch.Enable {
+		vs, err := vectorstore.New(cfg)
+		if err != nil {
+			log.Warn().Err(err).Msg("failed to create vector store, semantic search disabled")
+		} else if err := vs.Init(); err != nil {
+			log.Warn().Err(err).Msg("failed to init vector store, semantic search disabled")
+		} else {
+			i.vectorStore = vs
+			i.embedder = vectorstore.NewEmbedder(&cfg.SemanticSearch)
+			log.Info().Msg("semantic search enabled")
+		}
 	}
 	if err := registry.RegisterHighlighter("ansi", invertedAnsiHighlighter); err != nil {
 		return err
@@ -202,6 +232,21 @@ func Reindex(basePath string, rules *config.Rules, skipSensitiveChecks bool, det
 	if err != nil {
 		return err
 	}
+
+	// Carry the vector store and embedder into the temporary indexer so that
+	// MultiBatch.Add() re-embeds every surviving document.  The vector store is
+	// rebuilt in-place (no temp-dir / rename dance is needed because it is a
+	// separate file from the Bleve indexes).
+	vs := idx.vectorStore
+	embedder := idx.embedder
+	if vs != nil && embedder != nil {
+		if err := vs.Clear(); err != nil {
+			log.Warn().Err(err).Msg("failed to clear vector store before reindex")
+		} else {
+			tmpIdx.vectorStore = vs
+			tmpIdx.embedder = embedder
+		}
+	}
 	q := query.NewMatchAllQuery()
 	total := idx.Total()
 	batchSize := 50
@@ -282,7 +327,9 @@ func Reindex(basePath string, rules *config.Rules, skipSensitiveChecks bool, det
 		latest = res.Hits[n-1].Fields["url"].(string)
 		log.Info().Msg(fmt.Sprintf("Reindexed [%d/%d]", page*batchSize, total))
 	}
+	idx.vectorStore = nil // prevent Close() from closing the store we're still using
 	idx.Close()
+	tmpIdx.vectorStore = nil // already referenced by vs; prevent double-close
 	tmpIdx.Close()
 	for n := range idx.indexers {
 		idxPath := filepath.Join(basePath, n)
@@ -305,6 +352,11 @@ func Reindex(basePath string, rules *config.Rules, skipSensitiveChecks bool, det
 	if err != nil {
 		return err
 	}
+	// Restore the vector store and embedder on the newly initialized global indexer.
+	if vs != nil && embedder != nil {
+		i.vectorStore = vs
+		i.embedder = embedder
+	}
 	return os.RemoveAll(tmpBasePath)
 }
 
@@ -314,6 +366,44 @@ func DocumentCount() uint64 {
 
 func DocumentCountByUser(userID uint) uint64 {
 	return i.TotalByUser(userID)
+}
+
+// SemanticSearchEnabled reports whether the vector store and embedder are active.
+func SemanticSearchEnabled() bool {
+	return i != nil && i.embedder != nil && i.vectorStore != nil
+}
+
+// semanticTextPreviewLen is the maximum number of runes returned in
+// MatchedChunk and semantic-only Document.Text fields. Keeps response payloads
+// comparable to Bleve's keyword result snippets.
+const semanticTextPreviewLen = 500
+
+// truncateText trims s to at most maxRunes runes, appending "…" when cut.
+func truncateText(s string, maxRunes int) string {
+	runes := []rune(s)
+	if len(runes) <= maxRunes {
+		return s
+	}
+	return string(runes[:maxRunes]) + "…"
+}
+
+// embedDocumentChunks splits the document text into chunks, batch-embeds them,
+// and stores the resulting chunk vectors. Errors are logged but not propagated
+// so that Bleve indexing can still proceed.
+func embedDocumentChunks(idx *indexer, d *document.Document) {
+	start := time.Now()
+	chunks, err := idx.embedder.ChunkAndEmbed(d.Title+" "+d.Text, d.Title)
+	if err != nil {
+		log.Warn().Err(err).Str("url", d.URL).Msg("chunk embedding failed, skipping vectors")
+		return
+	}
+	if len(chunks) == 0 {
+		return
+	}
+	if err := idx.vectorStore.PutChunks(d.ID(), d.UserID, chunks); err != nil {
+		log.Warn().Err(err).Str("url", d.URL).Msg("vector store write failed")
+	}
+	log.Debug().Str("url", d.URL).Int("chunks", len(chunks)).Dur("duration", time.Since(start)).Msg("embedded document chunks")
 }
 
 func Add(d *document.Document) error {
@@ -349,6 +439,11 @@ func (i *indexer) AddDocument(d *document.Document) error {
 		if err := d.Process(i.langDetector, extractor.Extract); err != nil {
 			return err
 		}
+	}
+	if i.embedder != nil && i.vectorStore != nil {
+		i.embedWg.Go(func() {
+			embedDocumentChunks(i, d)
+		})
 	}
 	return i.getOrCreate(d.Language).Index(d.ID(), d)
 }
@@ -431,6 +526,13 @@ func (i *indexer) addIndexer(name, lang string) error {
 }
 
 func (i *indexer) Close() {
+	// Wait for any in-flight async embeddings before closing the vector store.
+	i.embedWg.Wait()
+	if i.vectorStore != nil {
+		if err := i.vectorStore.Close(); err != nil {
+			log.Warn().Err(err).Msg("failed to close vector store")
+		}
+	}
 	for name, idx := range i.indexers {
 		if err := idx.Close(); err != nil {
 			log.Warn().Err(err).Str("index", name).Msg("failed to close index")
@@ -465,6 +567,9 @@ func (b *MultiBatch) Add(d *document.Document) error {
 			return err
 		}
 	}
+	if b.indexer.embedder != nil && b.indexer.vectorStore != nil {
+		embedDocumentChunks(b.indexer, d)
+	}
 	idx := b.indexer.getOrCreate(d.Language)
 	return b.getOrCreateBatch(idx.Name(), idx).Index(d.ID(), d)
 }
@@ -485,6 +590,11 @@ func (b *MultiBatch) Save() error {
 }
 
 func Delete(id string) error {
+	if i.vectorStore != nil {
+		if err := i.vectorStore.Delete(id); err != nil {
+			log.Warn().Err(err).Str("id", id).Msg("vector store delete failed")
+		}
+	}
 	for _, idx := range i.indexers {
 		if err := idx.Delete(id); err != nil {
 			return err
@@ -530,6 +640,13 @@ func DeleteByQuery(text string, userID *uint, onDelete func(url string, userID u
 		}
 		if err := batch.Save(); err != nil {
 			return count, err
+		}
+		if i.vectorStore != nil {
+			for _, h := range res.Hits {
+				if err := i.vectorStore.Delete(h.ID); err != nil {
+					log.Warn().Err(err).Str("id", h.ID).Msg("vector store delete failed")
+				}
+			}
 		}
 		if onDelete != nil {
 			for _, h := range res.Hits {
@@ -621,6 +738,72 @@ func Search(cfg *config.Config, q *Query) (*Results, error) {
 			q.PageKey = r.PageKey
 		}
 	}
+
+	// Run semantic search if enabled and the embedding infrastructure is available.
+	if q.SemanticEnabled && i.embedder != nil && i.vectorStore != nil && q.Text != "" {
+		r.SemanticEnabled = true
+		vec, err := i.embedder.EmbedQuery(q.Text)
+		if err != nil {
+			log.Warn().Err(err).Msg("semantic query embedding failed")
+		} else {
+			threshold := q.SemanticThreshold
+			if threshold <= 0 {
+				threshold = cfg.SemanticSearch.SimilarityThreshold
+			}
+			resultLimit := cfg.SemanticSearch.ResultLimit
+			vsResults, err := i.vectorStore.Search(vec, resultLimit, threshold, q.UserID)
+			if err != nil {
+				log.Warn().Err(err).Msg("vector store search failed")
+			} else {
+				// Build a set of URLs already in keyword results to avoid duplicating docs.
+				keywordURLs := make(map[string]struct{}, len(matches))
+				for _, d := range matches {
+					keywordURLs[d.URL] = struct{}{}
+				}
+				// Aggregate chunk-level results by doc_id, keeping the best
+				// similarity and the text of the best-matching chunk.
+				type docHit struct {
+					similarity float64
+					chunkText  string
+				}
+				bestByDoc := make(map[string]*docHit)
+				// Preserve insertion order for stable output.
+				var docOrder []string
+				for _, vr := range vsResults {
+					if existing, ok := bestByDoc[vr.DocID]; ok {
+						if vr.Similarity > existing.similarity {
+							existing.similarity = vr.Similarity
+							existing.chunkText = vr.ChunkText
+						}
+					} else {
+						bestByDoc[vr.DocID] = &docHit{
+							similarity: vr.Similarity,
+							chunkText:  vr.ChunkText,
+						}
+						docOrder = append(docOrder, vr.DocID)
+					}
+				}
+				for _, docID := range docOrder {
+					dh := bestByDoc[docID]
+					hit := SemanticHit{
+						DocID:        docID,
+						Similarity:   dh.similarity,
+						MatchedChunk: truncateText(dh.chunkText, semanticTextPreviewLen),
+					}
+					// For semantic-only hits, populate the document with a truncated text preview.
+					d := GetByURL(docID)
+					if d != nil {
+						if _, inKeyword := keywordURLs[d.URL]; !inKeyword {
+							d.Text = truncateText(d.Text, semanticTextPreviewLen)
+							hit.Document = d
+						}
+					}
+					r.SemanticHits = append(r.SemanticHits, hit)
+				}
+			}
+		}
+	}
+
 	return r, nil
 }
 
