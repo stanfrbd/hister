@@ -13,15 +13,36 @@ type TextChunk struct {
 	TokenCount int
 }
 
+// isCJKIdeograph returns true for characters from CJK scripts that do not use
+// whitespace word separators: CJK Unified Ideographs, Hiragana, Katakana, and
+// Hangul Syllables. Each such character is treated as a standalone token so
+// that ChunkText produces sensible boundaries for Chinese, Japanese, and Korean
+// text.
+func isCJKIdeograph(r rune) bool {
+	return unicode.Is(unicode.Han, r) ||
+		unicode.Is(unicode.Hiragana, r) ||
+		unicode.Is(unicode.Katakana, r) ||
+		unicode.Is(unicode.Hangul, r)
+}
+
 // tokenize splits text into tokens on whitespace and punctuation boundaries.
-// Each contiguous run of letters/digits is a token. This is a simple
-// approximation — it doesn't match any specific model's BPE tokenizer, but is
-// good enough for determining chunk boundaries.
+// Each contiguous run of letters/digits is a token, except CJK ideographs
+// which are emitted as individual tokens because those scripts do not use
+// whitespace separators. This is a simple approximation that does not match
+// any specific model's BPE tokenizer, but is good enough for determining
+// chunk boundaries.
 func tokenize(text string) []string {
 	var tokens []string
 	var cur strings.Builder
 	for _, r := range text {
-		if unicode.IsLetter(r) || unicode.IsDigit(r) {
+		if isCJKIdeograph(r) {
+			// Flush any accumulated Latin/digit run.
+			if cur.Len() > 0 {
+				tokens = append(tokens, cur.String())
+				cur.Reset()
+			}
+			tokens = append(tokens, string(r))
+		} else if unicode.IsLetter(r) || unicode.IsDigit(r) {
 			cur.WriteRune(r)
 		} else {
 			if cur.Len() > 0 {
