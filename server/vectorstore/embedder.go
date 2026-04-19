@@ -24,6 +24,8 @@ type Embedder struct {
 	client           *http.Client
 	maxContextLength int
 	chunkOverlap     int
+	queryPrefix      string
+	documentPrefix   string
 }
 
 // NewEmbedder creates an Embedder from the semantic search config.
@@ -36,6 +38,8 @@ func NewEmbedder(cfg *config.SemanticSearch) *Embedder {
 		dimensions:       cfg.Dimensions,
 		maxContextLength: cfg.MaxContextLength,
 		chunkOverlap:     cfg.ChunkOverlap,
+		queryPrefix:      cfg.QueryPrefix,
+		documentPrefix:   cfg.DocumentPrefix,
 		client: &http.Client{
 			Timeout: 30 * time.Second,
 		},
@@ -113,6 +117,13 @@ func (e *Embedder) Embed(text string) ([]float32, error) {
 	return toFloat32(result.Data[0].Embedding), nil
 }
 
+// EmbedQuery embeds a search query, prepending the configured query prefix
+// (e.g. "search_query: ") when set. Many embedding models (BGE, E5, Nomic,
+// GTE) produce better recall when queries and documents use distinct prefixes.
+func (e *Embedder) EmbedQuery(text string) ([]float32, error) {
+	return e.Embed(e.queryPrefix + text)
+}
+
 // EmbedBatch converts multiple texts in a single request.
 func (e *Embedder) EmbedBatch(texts []string) ([][]float32, error) {
 	result, err := e.doEmbeddingRequest(texts)
@@ -137,18 +148,21 @@ func toFloat32(f64 []float64) []float32 {
 	return f32
 }
 
-// ChunkAndEmbed splits text into overlapping chunks, batch-embeds them, and
-// returns Chunk values ready for storage. Returns nil (not an error) when the
-// text is empty.
-func (e *Embedder) ChunkAndEmbed(text string) ([]Chunk, error) {
+// ChunkAndEmbed splits text into overlapping chunks, prepends document context
+// metadata title and the configured document prefix to each chunk,
+// batch-embeds them, and returns Chunk values ready for storage. Returns nil
+// (not an error) when the text is empty.
+func (e *Embedder) ChunkAndEmbed(text, title string) ([]Chunk, error) {
 	textChunks := ChunkText(text, e.maxContextLength, e.chunkOverlap)
 	if len(textChunks) == 0 {
 		return nil, nil
 	}
 
+	header := e.documentPrefix + "Title: " + title + " | "
+
 	texts := make([]string, len(textChunks))
 	for i, tc := range textChunks {
-		texts[i] = tc.Text
+		texts[i] = header + tc.Text
 	}
 
 	vectors, err := e.EmbedBatch(texts)

@@ -392,8 +392,7 @@ func truncateText(s string, maxRunes int) string {
 // so that Bleve indexing can still proceed.
 func embedDocumentChunks(idx *indexer, d *document.Document) {
 	start := time.Now()
-	text := d.Title + " " + d.Text
-	chunks, err := idx.embedder.ChunkAndEmbed(text)
+	chunks, err := idx.embedder.ChunkAndEmbed(d.Title+" "+d.Text, d.Title)
 	if err != nil {
 		log.Warn().Err(err).Str("url", d.URL).Msg("chunk embedding failed, skipping vectors")
 		return
@@ -743,7 +742,7 @@ func Search(cfg *config.Config, q *Query) (*Results, error) {
 	// Run semantic search if enabled and the embedding infrastructure is available.
 	if q.SemanticEnabled && i.embedder != nil && i.vectorStore != nil && q.Text != "" {
 		r.SemanticEnabled = true
-		vec, err := i.embedder.Embed(q.Text)
+		vec, err := i.embedder.EmbedQuery(q.Text)
 		if err != nil {
 			log.Warn().Err(err).Msg("semantic query embedding failed")
 		} else {
