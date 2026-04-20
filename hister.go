@@ -152,8 +152,21 @@ var listURLsCmd = &cobra.Command{
 	Use:   "list-urls",
 	Short: "List indexed URLs",
 	Long:  `List all indexed URLs by fetching them from the running server`,
-	Run: func(_ *cobra.Command, _ []string) {
-		c := newClient()
+	PreRun: func(cmd *cobra.Command, _ []string) {
+		offline, _ := cmd.Flags().GetBool("offline")
+		if offline {
+			initIndex()
+		}
+	},
+	Run: func(cmd *cobra.Command, _ []string) {
+		offline, _ := cmd.Flags().GetBool("offline")
+		if offline {
+			indexer.Iterate(func(doc *document.Document) {
+				fmt.Println(doc.URL)
+			})
+			return
+		}
+		c := newClient(client.WithTimeout(0))
 		pageKey := ""
 		for {
 			res, err := c.Search(&indexer.Query{Text: "*", PageKey: pageKey, Sort: "domain"})
@@ -924,6 +937,8 @@ func init() {
 	crawlCmd.AddCommand(crawlDeleteCmd)
 
 	listenCmd.Flags().StringP("address", "a", dcfg.Server.Address, "Listen address")
+
+	listURLsCmd.Flags().Bool("offline", false, "connect to the indexer directly without using the HTTP API (server should be stopped)")
 
 	importCmd.Flags().IntP("min-visit", "m", 1, "only import URLs that were opened at least 'min-visit' times")
 
