@@ -118,7 +118,7 @@ func (e *WikipediaExtractor) Preview(d *document.Document) (types.PreviewRespons
 	if err != nil {
 		return types.PreviewResponse{}, types.ExtractorContinue, err
 	}
-	return types.PreviewResponse{Content: sanitizer.SanitizeHTML(html)}, types.ExtractorStop, nil
+	return types.PreviewResponse{Content: sanitizer.SanitizeTrustedHTML(html)}, types.ExtractorStop, nil
 }
 
 // Non-content Wikipedia namespaces to exclude from extraction.

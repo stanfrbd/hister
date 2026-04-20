@@ -9,9 +9,20 @@ import (
 )
 
 var (
-	htmlSanitizerPolicy *bluemonday.Policy
-	textSanitizerPolicy = bluemonday.StrictPolicy()
+	htmlSanitizerPolicy        *bluemonday.Policy
+	htmlSanitizerPolicyTrusted *bluemonday.Policy
+	textSanitizerPolicy        = bluemonday.StrictPolicy()
 )
+
+// trustedLayoutStyles are positioning/layout CSS properties that are denied by
+// the default policy because attacker-controlled content could use them to
+// overlap the host page (e.g. a fake URL bar positioned over the real one).
+// They are permitted only by SanitizeTrustedHTML, for extractors whose source
+// is editorially moderated (e.g. Wikipedia).
+var trustedLayoutStyles = []string{
+	"display", "position", "float",
+	"top", "left", "right", "bottom",
+}
 
 // SVG elements allowed in sanitized output.
 // foreignObject, use, and symbol are excluded because they can embed or
@@ -85,6 +96,11 @@ var svgAttrRules = []svgAttrRule{
 }
 
 func init() {
+	htmlSanitizerPolicy = buildHTMLPolicy(false)
+	htmlSanitizerPolicyTrusted = buildHTMLPolicy(true)
+}
+
+func buildHTMLPolicy(trusted bool) *bluemonday.Policy {
 	p := bluemonday.NewPolicy()
 	p.AllowElements(
 		"a", "abbr", "b", "br", "canvas", "caption", "center", "cite",
@@ -116,9 +132,10 @@ func init() {
 		"margin", "margin-top", "margin-bottom", "margin-left", "margin-right",
 		// Sizing.
 		"width", "max-width", "min-width", "height", "max-height",
-		// Layout.
-		"float", "clear", "display", "position",
-		"top", "left", "right", "bottom", "z-index",
+		// Layout. display/position/float/top/left/right/bottom are intentionally
+		// excluded: they let sanitized content overlap the host page and could be
+		// used for clickjacking (e.g. a fake URL bar positioned over the real one).
+		"clear", "z-index",
 		"vertical-align", "line-height", "white-space",
 		"overflow", "overflow-x", "overflow-y",
 		// Flex.
@@ -147,7 +164,10 @@ func init() {
 	p.AllowTables()
 	p.RequireNoFollowOnLinks(false)
 	p.AllowURLSchemes("mailto", "http", "https")
-	htmlSanitizerPolicy = p
+	if trusted {
+		p.AllowStyles(trustedLayoutStyles...).Globally()
+	}
+	return p
 }
 
 // applySVGAttrRules registers all SVG attribute allowlists from the rules table.
@@ -168,6 +188,15 @@ func applySVGAttrRules(p *bluemonday.Policy) {
 
 func SanitizeHTML(h string) string {
 	return htmlSanitizerPolicy.Sanitize(h)
+}
+
+// SanitizeTrustedHTML is a variant of SanitizeHTML for extractors whose input
+// comes from editorially moderated sources (e.g. Wikipedia). It additionally
+// permits layout CSS properties (display/position/float/top/left/right/bottom)
+// that the default policy strips to prevent clickjacking overlays. Do not use
+// for arbitrary third-party HTML.
+func SanitizeTrustedHTML(h string) string {
+	return htmlSanitizerPolicyTrusted.Sanitize(h)
 }
 
 // SanitizeText strips every HTML tag, decodes entities and trims
