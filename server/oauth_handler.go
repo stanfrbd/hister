@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"time"
 
+	servererrors "github.com/asciimoo/hister/server/errors"
 	"github.com/asciimoo/hister/server/model"
 	"github.com/asciimoo/hister/server/oauth"
 
@@ -123,7 +124,7 @@ func serveOAuthCallback(c *webContext) {
 		serve500(c)
 		return
 	}
-	defer tokenResp.Body.Close()
+	defer servererrors.LogCloseBody(tokenResp.Body)
 	tokenBody, err := io.ReadAll(tokenResp.Body)
 	if err != nil {
 		log.Error().Err(err).Msg("oauth: failed to read token response")

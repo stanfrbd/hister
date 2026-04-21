@@ -10,6 +10,8 @@ import (
 	"net/url"
 	"slices"
 	"strings"
+
+	servererrors "github.com/asciimoo/hister/server/errors"
 )
 
 const (
@@ -42,7 +44,7 @@ func (o *OIDCOAuth) fetch(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("oidc: failed to fetch configuration: %w", err)
 	}
-	defer resp.Body.Close()
+	defer servererrors.LogCloseBody(resp.Body)
 
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("oidc: unexpected configuration response status code: %d", resp.StatusCode)
@@ -148,7 +150,7 @@ func (o *OIDCOAuth) GetUserInfo(ctx context.Context, response TokenResponse) (*U
 	if err != nil {
 		return nil, fmt.Errorf("oidc: failed to fetch UserInfo response: %w", err)
 	}
-	defer resp.Body.Close()
+	defer servererrors.LogCloseBody(resp.Body)
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("oidc: unexpected UserInfo response status code: %d", resp.StatusCode)

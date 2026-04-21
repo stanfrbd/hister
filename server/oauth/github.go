@@ -9,6 +9,8 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+
+	servererrors "github.com/asciimoo/hister/server/errors"
 )
 
 const (
@@ -78,7 +80,7 @@ func (g GitHubOAuth) GetUserInfo(ctx context.Context, response TokenResponse) (*
 	if err != nil {
 		return nil, fmt.Errorf("github: failed to execute UserInfo request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer servererrors.LogCloseBody(resp.Body)
 
 	uBody, err := io.ReadAll(resp.Body)
 	if err != nil {

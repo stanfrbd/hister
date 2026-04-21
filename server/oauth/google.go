@@ -9,6 +9,8 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+
+	servererrors "github.com/asciimoo/hister/server/errors"
 )
 
 const (
@@ -85,7 +87,7 @@ func (g GoogleOAuth) GetUserInfo(ctx context.Context, response TokenResponse) (*
 	if err != nil {
 		return nil, fmt.Errorf("google: failed to execute UserInfo request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer servererrors.LogCloseBody(resp.Body)
 
 	uBody, err := io.ReadAll(resp.Body)
 	if err != nil {
