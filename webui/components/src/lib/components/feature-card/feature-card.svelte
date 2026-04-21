@@ -11,6 +11,7 @@
     descColor = 'text-[var(--text-secondary)]',
     iconBg = 'bg-hister-indigo',
     iconColor = 'text-white',
+    iconSize = 24,
     horizontal = false,
     class: className = '',
   }: {
@@ -22,6 +23,7 @@
     descColor?: string;
     iconBg?: string;
     iconColor?: string;
+    iconSize?: number;
     horizontal?: boolean;
     class?: string;
   } = $props();
@@ -38,7 +40,7 @@
   {#if icon}
     {@const Icon = icon}
     <div class={cn(iconBg, 'flex h-12 w-12 items-center justify-center', horizontal && 'shrink-0')}>
-      <Icon size={24} class={iconColor} />
+      <Icon size={iconSize} class={iconColor} />
     </div>
   {/if}
   {#if horizontal}
