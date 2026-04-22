@@ -39,13 +39,12 @@ See the [OAuth section of the configuration docs](/docs/configuration#oauth) for
 
 ### Browser Extension
 
-The extension supports per-user authentication using a personal access token:
+The extension authenticates by copying the session cookies from the already-logged-in web interface:
 
-1. Log in to the Hister web interface.
-2. Navigate to your profile page and generate a personal access token.
-3. In the extension's **Options** page (or the settings panel in the popup), enter your personal access token in the **Access Token** field and save.
+1. Log in to the Hister web interface in the same browser.
+2. Click the **Authenticate Extension** button in the extension popup (or options page).
 
-The extension sends the token as the `X-Access-Token` HTTP header. All pages indexed through the extension are stored under your user account.
+The extension will copy the active session cookies from the web UI. All pages indexed through the extension are stored under your user account.
 
 ### API / Command-Line Client
 

@@ -37,11 +37,12 @@ The extension detects when you click on a search result in **Google** or **DuckD
 
 Clicking the extension icon opens the popup, which provides quick access to the most common controls.
 
-| Control                       | Description                                                                                                     |
-| ----------------------------- | --------------------------------------------------------------------------------------------------------------- |
-| **Automatic indexing** toggle | Enable or disable automatic page indexing. The setting is saved immediately.                                    |
-| **Reindex Page** button       | Force a re-submission of the current page to the server.                                                        |
-| **Settings icon** (⚙)         | Expand an inline form to view and update the Server URL and Access Token without opening the full options page. |
+| Control                           | Description                                                                                               |
+| --------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| **Automatic indexing** toggle     | Enable or disable automatic page indexing. The setting is saved immediately.                              |
+| **Reindex Page** button           | Force a re-submission of the current page to the server.                                                  |
+| **Authenticate Extension** button | Copy session cookies from the logged-in Hister web UI to authenticate the extension (user handling only). |
+| **Settings icon** (⚙)             | Expand an inline form to view and update the Server URL without opening the full options page.            |
 
 A status banner appears at the bottom of the popup after any action, showing success or error feedback. If the server rejected the last submission, a `!` badge is shown on the extension icon; saving valid settings clears it.
 
@@ -59,10 +60,18 @@ To open it directly, right click on the extension icon and select "Options", or 
 | Setting            | Default                  | Description                                                                                                                                                      |
 | ------------------ | ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Server URL**     | `http://127.0.0.1:4433/` | The full URL of your Hister server, including scheme and port.                                                                                                   |
-| **Access Token**   | _(empty)_                | Required if your server is configured with `app.access_token`. Sent as the `X-Access-Token` header.                                                              |
 | **Custom Headers** | _(none)_                 | Additional HTTP headers included with every request. Useful for reverse-proxy authentication (e.g., `Authorization: Basic …`). Each header is a name/value pair. |
 
-Click **Save Settings** to apply. The extension validates the connection by calling `GET /api/config` before saving; an invalid URL or wrong token will show an error instead.
+Click **Save Settings** to apply. The extension validates the connection by calling `GET /api/config` before saving; an invalid URL will show an error instead.
+
+### Authentication
+
+When [user handling](/docs/user-handling) is enabled, the extension authenticates by sharing the session cookies from the Hister web interface:
+
+1. Log in to the Hister web interface in the same browser.
+2. Click the **Authenticate Extension** button in the popup.
+
+The extension copies the active session cookie, so it submits pages under your user account. You don't need to repeat this step if you log out in the web interface.
 
 ## Troubleshooting
 
@@ -72,10 +81,11 @@ The last attempt to send page data to the server failed. Open the popup to see t
 
 - The Hister server is not running: start it with `hister listen`.
 - The **Server URL** is wrong: confirm it matches the address printed when the server starts (default `http://127.0.0.1:4433/`).
-- The **Access Token** is incorrect or missing: update it in the popup settings or the options page.
+- User handling is enabled but the extension is not authenticated: click **Authenticate Extension** in the popup after logging in to the web interface.
 
 **Pages are not being indexed**
 
 - Make sure **Automatic indexing** is enabled in the popup.
-- Check that the server is reachable and the URL/token are correct (see above).
+- Check that the server is reachable and the URL is correct (see above).
+- If user handling is enabled, make sure you have authenticated the extension (see above).
 - Some pages (browser-internal pages like `chrome://…`, `about:…`) cannot be accessed by extensions and are silently skipped.
