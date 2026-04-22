@@ -57,6 +57,33 @@ func getTokenQuery(t Token) (query.Query, bool) {
 			negated = true
 			v = v[1:]
 		}
+		var field string
+		for f := range weights {
+			if strings.HasPrefix(t.Value, f+":") {
+				field = f
+				break
+			}
+		}
+		if field != "" {
+			v := t.Value[len(field)+1:]
+			if strings.HasPrefix(v, "-") && len(v) > 1 {
+				negated = true
+				v = v[1:]
+			}
+			if field == "url" || field == "domain" {
+				if field == "url" {
+					v = normalizeFileURL(v)
+				}
+				q := bleve.NewTermQuery(strings.ToLower(v))
+				q.SetField(field)
+				q.SetBoost(weights[field])
+				return q, negated
+			}
+			q := bleve.NewMatchQuery(v)
+			q.SetField(field)
+			q.SetBoost(weights[field])
+			return q, negated
+		}
 		titleq := bleve.NewMatchPhraseQuery(v)
 		titleq.SetField("title")
 		titleq.SetBoost(weights["title"])
