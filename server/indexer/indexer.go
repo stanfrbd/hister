@@ -886,7 +886,13 @@ func Search(cfg *config.Config, q *Query) (*Results, error) {
 						MatchedChunk: truncateText(dh.chunkText, semanticTextPreviewLen),
 					}
 					// For semantic-only hits, populate the document with a truncated text preview.
-					d := GetByURL(docID)
+					// vectorStore.Search was scoped to q.UserID, so every docID
+					// here has that uid prefix (see document.GetDocID).
+					url := docID
+					if q.UserID > 0 {
+						url = strings.TrimPrefix(docID, fmt.Sprintf("%d:", q.UserID))
+					}
+					d := GetByURLAndUser(url, q.UserID)
 					if d != nil {
 						if _, inKeyword := keywordURLs[d.URL]; !inKeyword {
 							d.Text = truncateText(d.Text, semanticTextPreviewLen)
@@ -902,20 +908,11 @@ func Search(cfg *config.Config, q *Query) (*Results, error) {
 	return r, nil
 }
 
-func GetByURL(u string) *document.Document {
-	return getByURL(u, 0)
-}
-
-// GetByURLAndUser returns the document at u owned by uid. Use this in multi-
-// user contexts where GetByURL's first-hit behaviour could return a different
-// user's copy of the same URL (doc IDs are "uid:url", but the url field itself
-// is shared across owners). A uid of 0 matches the global owner, pass the
-// caller's own UserID to avoid cross-user leakage.
+// GetByURLAndUser returns the document at u owned by uid. The url field is
+// shared across owners in multi-user mode, so callers must pass their own
+// UserID to avoid returning another user's copy of the same URL. A uid of 0
+// matches the global (single-user) owner.
 func GetByURLAndUser(u string, uid uint) *document.Document {
-	return getByURL(u, uid)
-}
-
-func getByURL(u string, uid uint) *document.Document {
 	urlQ := query.NewTermQuery(strings.ToLower(u))
 	urlQ.SetField("url")
 	var q query.Query = urlQ
