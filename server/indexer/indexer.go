@@ -886,13 +886,7 @@ func Search(cfg *config.Config, q *Query) (*Results, error) {
 						MatchedChunk: truncateText(dh.chunkText, semanticTextPreviewLen),
 					}
 					// For semantic-only hits, populate the document with a truncated text preview.
-					// vectorStore.Search was scoped to q.UserID, so every docID
-					// here has that uid prefix (see document.GetDocID).
-					url := docID
-					if q.UserID > 0 {
-						url = strings.TrimPrefix(docID, fmt.Sprintf("%d:", q.UserID))
-					}
-					d := GetByURLAndUser(url, q.UserID)
+					d := GetByDocID(docID)
 					if d != nil {
 						if _, inKeyword := keywordURLs[d.URL]; !inKeyword {
 							d.Text = truncateText(d.Text, semanticTextPreviewLen)
@@ -911,17 +905,17 @@ func Search(cfg *config.Config, q *Query) (*Results, error) {
 // GetByURLAndUser returns the document at u owned by uid. The url field is
 // shared across owners in multi-user mode, so callers must pass their own
 // UserID to avoid returning another user's copy of the same URL. A uid of 0
-// matches the global (single-user) owner.
+// selects the global (single-user) owner; an instance that mixes uid-0 public
+// docs with per-user private docs still gets the right one because the lookup
+// goes through document.GetDocID.
 func GetByURLAndUser(u string, uid uint) *document.Document {
-	urlQ := query.NewTermQuery(strings.ToLower(u))
-	urlQ.SetField("url")
-	var q query.Query = urlQ
-	if uid > 0 {
-		f := float64(uid)
-		userQ := bleve.NewNumericRangeInclusiveQuery(&f, &f, new(true), new(true))
-		userQ.SetField("user_id")
-		q = bleve.NewConjunctionQuery(urlQ, userQ)
-	}
+	return GetByDocID(document.GetDocID(uid, u))
+}
+
+// GetByDocID returns the document with the given bleve document ID, or nil if
+// none exists. The ID is the uid-prefixed form produced by document.GetDocID.
+func GetByDocID(id string) *document.Document {
+	q := bleve.NewDocIDQuery([]string{id})
 	req := bleve.NewSearchRequest(q)
 	req.Fields = allFields
 	req.Highlight = bleve.NewHighlight()
