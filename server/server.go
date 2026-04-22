@@ -34,6 +34,10 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+// Version is set by the main package before Listen() is called so that MCP
+// and other server responses can expose the running binary version.
+var Version = "unknown"
+
 var (
 	appSubFS         iofs.FS
 	staticFileServer http.Handler

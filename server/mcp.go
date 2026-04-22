@@ -85,7 +85,7 @@ func serveMCP(c *webContext) {
 		mcpWriteResult(c, req.ID, map[string]any{
 			"protocolVersion": mcpProtocolVersion,
 			"capabilities":    map[string]any{"tools": map[string]any{}},
-			"serverInfo":      map[string]any{"name": "hister"},
+			"serverInfo":      map[string]any{"name": "hister", "version": Version},
 		})
 
 	case "notifications/initialized", "notifications/cancelled":

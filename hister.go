@@ -119,6 +119,7 @@ var listenCmd = &cobra.Command{
 				}
 			}()
 		}
+		server.Version = Version
 		server.Listen(cfg)
 	},
 }
