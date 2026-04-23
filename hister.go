@@ -41,7 +41,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-const versionBase = "v0.12.0"
+const versionBase = "v0.13.0"
 
 var Version = func() string {
 	if info, ok := debug.ReadBuildInfo(); ok {
