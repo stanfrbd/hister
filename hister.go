@@ -2,16 +2,13 @@ package main
 
 import (
 	"bufio"
-	"bytes"
 	"context"
 	"database/sql"
 	"encoding/csv"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"io/fs"
-	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -19,7 +16,6 @@ import (
 	"runtime/debug"
 	"strconv"
 	"strings"
-	"time"
 	_ "time/tzdata"
 
 	"github.com/asciimoo/hister/client"
@@ -81,6 +77,27 @@ var (
 	cfg       *config.Config
 	UserAgent = fmt.Sprintf("Mozilla/5.0 (compatible; Hister/%s; +https://hister.org/)", Version)
 )
+
+// stringToAnyMap converts map[string]string to map[string]any, used when
+// applying --backend-option flag values to crawler config.
+func stringToAnyMap(m map[string]string) map[string]any {
+	result := make(map[string]any, len(m))
+	for k, v := range m {
+		result[k] = v
+	}
+	return result
+}
+
+// applyCrawlerBackendFlags reads --backend and --backend-option flags from cmd
+// and applies them to cfg.Crawler, overriding any config-file values.
+func applyCrawlerBackendFlags(cmd *cobra.Command) {
+	if b, _ := cmd.Flags().GetString("backend"); b != "" {
+		cfg.Crawler.Backend = b
+	}
+	if opts, _ := cmd.Flags().GetStringToString("backend-option"); len(opts) > 0 {
+		cfg.Crawler.BackendOptions = stringToAnyMap(opts)
+	}
+}
 
 var rootCmd = &cobra.Command{
 	Use:     "hister",
@@ -422,6 +439,7 @@ var indexCmd = &cobra.Command{
 		recursive, _ := cmd.Flags().GetBool("recursive")
 		jobID, _ := cmd.Flags().GetString("job-id")
 		cfg.Crawler.UserAgent = UserAgent
+		applyCrawlerBackendFlags(cmd)
 
 		if recursive {
 			// Persistent crawl mode (always).
@@ -599,6 +617,8 @@ func init() {
 	indexCmd.Flags().Bool("global", false, "Make indexed documents available for all users (only for admins in multiuser mode)")
 	indexCmd.Flags().Uint("user-id", 0, "Index documents under the given user ID (only for admins in multiuser mode)")
 	indexCmd.Flags().String("job-id", "", "Persistent crawl job ID; use with --recursive to start a new job or alone to resume an existing one")
+	indexCmd.Flags().String("backend", "", "Crawler backend to use (\"http\" or \"chromedp\")")
+	indexCmd.Flags().StringToString("backend-option", nil, "Crawler backend option as key=value (repeatable, e.g. --backend-option exec_path=/usr/bin/chromium)")
 }
 
 var deleteCmd = &cobra.Command{
@@ -942,6 +962,8 @@ func init() {
 	listURLsCmd.Flags().Bool("offline", false, "connect to the indexer directly without using the HTTP API (server should be stopped)")
 
 	importCmd.Flags().IntP("min-visit", "m", 1, "only import URLs that were opened at least 'min-visit' times")
+	importCmd.Flags().String("backend", "", "Crawler backend to use (\"http\" or \"chromedp\")")
+	importCmd.Flags().StringToString("backend-option", nil, "Crawler backend option as key=value (repeatable, e.g. --backend-option exec_path=/usr/bin/chromium)")
 
 	createUserCmd.Flags().Bool("admin", false, "create user with admin privileges")
 
@@ -1234,52 +1256,37 @@ func yesNoPrompt(label string, def bool) bool {
 //}
 
 func indexURL(u string, clientOpts ...client.Option) error {
-	httpClient := &http.Client{
-		// Websites can be slow or unreachable, we don't want to wait too long for each of them, especially if we are indexing a lot of URLs during import.
-		Timeout: time.Duration(cfg.Crawler.Timeout) * time.Second,
-	}
 	if u == "" {
 		log.Warn().Msg("URL must not be empty")
 		return nil
 	}
-	ua := UserAgent
-	req, err := http.NewRequest("GET", u, nil)
+	cfg.Crawler.UserAgent = UserAgent
+	cr, err := crawler.New(&cfg.Crawler)
 	if err != nil {
-		return errors.New(`failed to download file: ` + err.Error())
-	}
-	req.Header.Set("User-Agent", ua)
-	r, err := httpClient.Do(req)
-	if err != nil {
-		return errors.New(`failed to download file: ` + err.Error())
+		return fmt.Errorf("failed to create crawler: %w", err)
 	}
 	defer func() {
-		if cerr := r.Body.Close(); cerr != nil {
-			log.Warn().Err(cerr).Msg("failed to close response body")
+		if err := cr.Close(); err != nil {
+			log.Warn().Err(err).Msg("crawler close error")
 		}
 	}()
-	if r.StatusCode < 200 || r.StatusCode >= 300 {
-		return fmt.Errorf("invalid response code: %d", r.StatusCode)
-	}
-	contentType := r.Header.Get("Content-type")
-	if !strings.Contains(contentType, "html") {
-		return errors.New("invalid content type: " + contentType)
-	}
-	buf := bytes.NewBuffer(nil)
-	_, err = io.Copy(buf, r.Body)
+	v, err := crawler.NewValidator(&crawler.ValidatorRules{MaxLinks: 1})
 	if err != nil {
-		return errors.New(`failed to read response body: ` + err.Error())
+		return fmt.Errorf("failed to create validator: %w", err)
 	}
-
-	d := &document.Document{
-		URL:  u,
-		HTML: buf.String(),
+	ch, err := cr.Crawl(context.Background(), u, v)
+	if err != nil {
+		return fmt.Errorf("failed to fetch %s: %w", u, err)
+	}
+	d, ok := <-ch
+	if !ok {
+		return fmt.Errorf("failed to fetch %s: no response", u)
 	}
 	if err := d.Process(nil, extractor.Extract); err != nil {
-		return errors.New(`failed to process document: ` + err.Error())
+		return fmt.Errorf("failed to process document: %w", err)
 	}
 	if d.Favicon == "" {
-		err := d.DownloadFavicon(UserAgent)
-		if err != nil {
+		if err := d.DownloadFavicon(UserAgent); err != nil {
 			log.Debug().Err(err).Str("URL", d.URL).Msg("failed to download favicon")
 		}
 	}
@@ -1324,6 +1331,8 @@ func crawlAndIndex(startURL string, cr crawler.Crawler, v *crawler.Validator, fo
 
 func importHistory(cmd *cobra.Command, args []string) {
 	// TODO: get skip rules from server
+	cfg.Crawler.UserAgent = UserAgent
+	applyCrawlerBackendFlags(cmd)
 
 	var browser string
 	if len(args) == 0 {
