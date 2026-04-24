@@ -179,7 +179,7 @@ func InitialModel(cfg *config.Config) *Model {
 		State:              StateInput,
 		PrevState:          StateInput,
 		Cfg:                cfg,
-		Client:             client.New(cfg.BaseURL("")),
+		Client:             client.New(cfg.BaseURL(""), client.WithAccessToken(cfg.App.AccessToken)),
 		SelectedIdx:        -1,
 		DialogReturnTab:    -1,
 		Limit:              ResultsPageSize,

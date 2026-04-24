@@ -20,7 +20,7 @@ type app struct{ m *model.Model }
 func (a *app) Init() tea.Cmd {
 	return tea.Batch(
 		textinput.Blink,
-		network.ConnectWebSocket(a.m.Cfg.WebSocketURL(), a.m.Cfg.BaseURL(""), a.m.WsChan, a.m.WsDone),
+		network.ConnectWebSocket(a.m.Cfg.WebSocketURL(), a.m.Cfg.BaseURL(""), a.m.Cfg.App.AccessToken, a.m.WsChan, a.m.WsDone),
 		network.ListenToWebSocket(a.m.WsChan, a.m.WsDone),
 	)
 }

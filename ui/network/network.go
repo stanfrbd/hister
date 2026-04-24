@@ -28,10 +28,13 @@ func ListenToWebSocket(wsChan chan tea.Msg, wsDone chan struct{}) tea.Cmd {
 	}
 }
 
-func ConnectWebSocket(wsURL, origin string, wsChan chan tea.Msg, wsDone chan struct{}) tea.Cmd {
+func ConnectWebSocket(wsURL, origin, token string, wsChan chan tea.Msg, wsDone chan struct{}) tea.Cmd {
 	return func() tea.Msg {
 		header := http.Header{}
 		header.Set("Origin", origin)
+		if token != "" {
+			header.Set("X-Access-Token", token)
+		}
 		conn, resp, err := websocket.DefaultDialer.Dial(wsURL, header)
 		if resp != nil && resp.Body != nil {
 			defer func() {

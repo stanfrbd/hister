@@ -154,7 +154,7 @@ func Update(m *model.Model, msg tea.Msg) tea.Cmd {
 		return tea.Tick(2*time.Second, func(_ time.Time) tea.Msg { return model.ReconnectMsg{} })
 
 	case model.ReconnectMsg:
-		return network.ConnectWebSocket(m.Cfg.WebSocketURL(), m.Cfg.BaseURL(""), m.WsChan, m.WsDone)
+		return network.ConnectWebSocket(m.Cfg.WebSocketURL(), m.Cfg.BaseURL(""), m.Cfg.App.AccessToken, m.WsChan, m.WsDone)
 
 	case model.ErrMsg:
 		return network.ListenToWebSocket(m.WsChan, m.WsDone)
