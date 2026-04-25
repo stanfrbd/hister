@@ -1098,38 +1098,26 @@ func serveFile(c *webContext) {
 }
 
 func serveAPI(c *webContext) {
-	type endpointArg struct {
-		Name        string `json:"name"`
-		Type        string `json:"type"`
-		Required    bool   `json:"required"`
-		Description string `json:"description"`
-	}
 	type endpointInfo struct {
-		Name         string         `json:"name"`
-		Path         string         `json:"path"`
-		Method       string         `json:"method"`
-		CSRFRequired bool           `json:"csrf_required"`
-		Description  string         `json:"description"`
-		Args         []*endpointArg `json:"args"`
+		Name         string             `json:"name"`
+		Path         string             `json:"path"`
+		Method       string             `json:"method"`
+		CSRFRequired bool               `json:"csrf_required"`
+		Description  string             `json:"description"`
+		Args         []*EndpointArg     `json:"args,omitempty"`
+		JSONSchema   []*JSONSchemaField `json:"json_schema,omitempty"`
 	}
 	var result []endpointInfo
 	for _, e := range Endpoints {
-		info := endpointInfo{
+		result = append(result, endpointInfo{
 			Name:         e.Name,
 			Path:         e.Path,
 			Method:       e.Method,
 			CSRFRequired: e.CSRFRequired,
 			Description:  e.Description,
-		}
-		for _, a := range e.Args {
-			info.Args = append(info.Args, &endpointArg{
-				Name:        a.Name,
-				Type:        a.Type,
-				Required:    a.Required,
-				Description: a.Description,
-			})
-		}
-		result = append(result, info)
+			Args:         e.Args,
+			JSONSchema:   e.JSONSchema,
+		})
 	}
 	c.JSON(result)
 }

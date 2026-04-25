@@ -13,6 +13,14 @@
     description: string;
   }
 
+  interface JSONSchemaField {
+    name: string;
+    type: string;
+    required: boolean;
+    description: string;
+    fields?: JSONSchemaField[];
+  }
+
   interface APIEndpoint {
     name: string;
     path: string;
@@ -20,6 +28,7 @@
     csrf_required: boolean;
     description: string;
     args: EndpointArg[] | null;
+    json_schema: JSONSchemaField[] | null;
   }
 
   let endpoints: APIEndpoint[] = $state([]);
@@ -46,7 +55,7 @@
 </svelte:head>
 
 <div class="flex-1 overflow-y-auto px-3 py-4 md:px-6 md:py-5">
-  <div class="mx-auto max-w-5xl">
+  <div class="mx-auto max-w-[80em]">
     <div class="mb-4 space-y-1 md:mb-5">
       <PageHeader color="hister-teal" size="sm">API Documentation</PageHeader>
       <p class="font-inter text-text-brand-secondary text-xs md:text-sm">
@@ -223,6 +232,111 @@
                         </p>
                       </div>
                     {/each}
+                  </div>
+                {/if}
+
+                {#if ep.json_schema && ep.json_schema.length > 0}
+                  {#snippet schemaTableRows(fields: JSONSchemaField[], depth: number)}
+                    {#each fields as field}
+                      <Table.Row class="border-brutal-border/30 border-b">
+                        <Table.Cell
+                          class="font-fira text-text-brand px-3 py-2 text-sm font-semibold"
+                        >
+                          {#if depth > 0}
+                            <span class="text-text-brand-muted select-none"
+                              >{'  '.repeat(depth)}↳&nbsp;</span
+                            >
+                          {/if}<code>{field.name}</code>
+                        </Table.Cell>
+                        <Table.Cell class="font-fira text-text-brand-secondary px-3 py-2 text-sm"
+                          ><code>{field.type}</code></Table.Cell
+                        >
+                        <Table.Cell class="px-3 py-2">
+                          {#if field.required}
+                            <Badge
+                              variant="default"
+                              class="bg-hister-rose border-0 px-1.5 py-0 text-[10px] text-white"
+                              >required</Badge
+                            >
+                          {:else}
+                            <span class="font-inter text-text-brand-muted text-xs">optional</span>
+                          {/if}
+                        </Table.Cell>
+                        <Table.Cell class="font-inter text-text-brand-secondary px-3 py-2 text-sm"
+                          >{field.description}</Table.Cell
+                        >
+                      </Table.Row>
+                      {#if field.fields && field.fields.length > 0}
+                        {@render schemaTableRows(field.fields, depth + 1)}
+                      {/if}
+                    {/each}
+                  {/snippet}
+
+                  {#snippet schemaCards(fields: JSONSchemaField[], depth: number)}
+                    {#each fields as field}
+                      <div class="space-y-0.5" style="margin-left: {depth * 14}px">
+                        <div class="flex items-center gap-2">
+                          {#if depth > 0}
+                            <span class="text-text-brand-muted text-xs">↳</span>
+                          {/if}
+                          <code class="font-fira text-text-brand text-sm font-semibold"
+                            >{field.name}</code
+                          >
+                          <code class="font-fira text-text-brand-muted text-xs">{field.type}</code>
+                          {#if field.required}
+                            <Badge
+                              variant="default"
+                              class="bg-hister-rose border-0 px-1.5 py-0 text-[10px] text-white"
+                              >required</Badge
+                            >
+                          {/if}
+                        </div>
+                        <p class="font-inter text-text-brand-secondary text-xs">
+                          {field.description}
+                        </p>
+                      </div>
+                      {#if field.fields && field.fields.length > 0}
+                        {@render schemaCards(field.fields, depth + 1)}
+                      {/if}
+                    {/each}
+                  {/snippet}
+
+                  <h4
+                    class="font-outfit text-text-brand-muted mt-3 mb-2 text-xs font-bold tracking-wider uppercase"
+                  >
+                    Request Body (JSON)
+                  </h4>
+                  <div class="hidden md:block">
+                    <Table.Root>
+                      <Table.Header>
+                        <Table.Row
+                          class="bg-muted-surface border-brutal-border hover:bg-muted-surface border-b"
+                        >
+                          <Table.Head
+                            class="font-inter text-text-brand-muted h-auto px-3 py-2 text-xs font-bold"
+                            >Field</Table.Head
+                          >
+                          <Table.Head
+                            class="font-inter text-text-brand-muted h-auto px-3 py-2 text-xs font-bold"
+                            >Type</Table.Head
+                          >
+                          <Table.Head
+                            class="font-inter text-text-brand-muted h-auto px-3 py-2 text-xs font-bold"
+                            >Required</Table.Head
+                          >
+                          <Table.Head
+                            class="font-inter text-text-brand-muted h-auto px-3 py-2 text-xs font-bold"
+                            >Description</Table.Head
+                          >
+                        </Table.Row>
+                      </Table.Header>
+                      <Table.Body>
+                        {@render schemaTableRows(ep.json_schema, 0)}
+                      </Table.Body>
+                    </Table.Root>
+                  </div>
+                  <div class="space-y-2.5 md:hidden">
+                    {@render schemaCards(ep.json_schema, 0)}
                   </div>
                 {/if}
               </Card.Content>
