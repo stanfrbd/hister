@@ -18,7 +18,8 @@
   } from '$lib/search';
   import { fetchConfig, apiFetch, getUserId } from '$lib/api';
   import { showHelp } from '$lib/stores';
-  import type { SearchResults, SemanticHit, SearchResult } from '$lib/search';
+  import type { SearchResults, SemanticHit, SearchResult, SearchQueryOptions } from '$lib/search';
+  import { RESULTS_PER_PAGE } from '$lib/search';
   import { animate } from 'animejs';
   import { Input } from '@hister/components/ui/input';
   import { Button } from '@hister/components/ui/button';
@@ -292,41 +293,28 @@
     wsManager.connect();
   }
 
+  function searchQueryOpts(pageKey = ''): SearchQueryOptions {
+    return {
+      sort: currentSort,
+      dateFrom,
+      dateTo,
+      semantic: { enabled: semanticOn && config.semanticEnabled, threshold: similarityThreshold },
+      pageKey,
+      limit: RESULTS_PER_PAGE,
+    };
+  }
+
   function sendQuery(q: string) {
     loadingMoreForQuery = '';
     pageKey = '';
     hasMore = false;
-    const message = buildSearchQuery(
-      q,
-      currentSort,
-      dateFrom,
-      dateTo,
-      {
-        enabled: semanticOn && config.semanticEnabled,
-        threshold: similarityThreshold,
-      },
-      '',
-      20,
-    );
-    wsManager?.send(JSON.stringify(message));
+    wsManager?.send(JSON.stringify(buildSearchQuery(q, searchQueryOpts())));
   }
 
   function loadMoreResults() {
     if (!pageKey || !hasMore || loadingMoreForQuery) return;
     loadingMoreForQuery = query;
-    const message = buildSearchQuery(
-      query,
-      currentSort,
-      dateFrom,
-      dateTo,
-      {
-        enabled: semanticOn && config.semanticEnabled,
-        threshold: similarityThreshold,
-      },
-      pageKey,
-      20,
-    );
-    wsManager?.sendImmediate(JSON.stringify(message));
+    wsManager?.sendImmediate(JSON.stringify(buildSearchQuery(query, searchQueryOpts(pageKey))));
   }
 
   let skipUrlUpdate = false;

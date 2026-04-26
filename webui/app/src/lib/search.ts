@@ -338,6 +338,17 @@ export class KeyHandler {
   }
 }
 
+export const RESULTS_PER_PAGE = 20;
+
+export interface SearchQueryOptions {
+  sort?: string;
+  dateFrom?: string;
+  dateTo?: string;
+  semantic?: { enabled: boolean; threshold: number };
+  pageKey?: string;
+  limit?: number;
+}
+
 interface QueryParams {
   text: string;
   sort?: string;
@@ -350,15 +361,8 @@ interface QueryParams {
   page_key?: string;
 }
 
-export function buildSearchQuery(
-  text: string,
-  sort?: string,
-  dateFrom?: string,
-  dateTo?: string,
-  semantic?: { enabled: boolean; threshold: number },
-  pageKey?: string,
-  limit?: number,
-): QueryParams {
+export function buildSearchQuery(text: string, opts: SearchQueryOptions = {}): QueryParams {
+  const { sort, dateFrom, dateTo, semantic, pageKey, limit } = opts;
   return {
     text,
     highlight: 'HTML',
