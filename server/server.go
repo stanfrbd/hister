@@ -196,7 +196,6 @@ func registerEndpoints(cfg *config.Config) http.Handler {
 	userHandling := cfg.App.UserHandling
 
 	for _, e := range Endpoints {
-		log.Debug().Str("Endpoint", e.Pattern()).Msg("Registering endpoint")
 		h := e.Handler
 		if e.CSRFRequired {
 			h = withCSRF(h)
