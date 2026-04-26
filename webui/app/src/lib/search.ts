@@ -21,7 +21,7 @@ interface SearchMessage {
   semantic_threshold?: number;
 }
 
-interface SearchResult {
+export interface SearchResult {
   url: string;
   title: string;
   domain: string;
@@ -47,6 +47,7 @@ export interface SearchResults {
   query_suggestion?: string;
   semantic_hits?: SemanticHit[];
   semantic_enabled?: boolean;
+  page_key?: string;
 }
 
 export function escapeHTML(s: string): string {
@@ -218,6 +219,16 @@ export class WebSocketManager {
     }, this.debounceMs);
   }
 
+  // sendImmediate sends without debouncing. Use for load-more requests so that
+  // a pending debounced query (from the user typing) is not cancelled.
+  sendImmediate(message: string): void {
+    if (this.inFlight) {
+      this.pendingMessage = message;
+    } else {
+      this.dispatch(message);
+    }
+  }
+
   private dispatch(message: string): void {
     if (this.ws?.readyState === WebSocket.OPEN) {
       this.inFlight = true;
@@ -335,6 +346,8 @@ interface QueryParams {
   highlight?: string;
   semantic_enabled?: boolean;
   semantic_threshold?: number;
+  limit?: number;
+  page_key?: string;
 }
 
 export function buildSearchQuery(
@@ -343,6 +356,8 @@ export function buildSearchQuery(
   dateFrom?: string,
   dateTo?: string,
   semantic?: { enabled: boolean; threshold: number },
+  pageKey?: string,
+  limit?: number,
 ): QueryParams {
   return {
     text,
@@ -353,6 +368,8 @@ export function buildSearchQuery(
     }),
     ...(dateTo && { date_to: Math.floor(new Date(dateTo).getTime() / 1000) }),
     ...(semantic && { semantic_enabled: semantic.enabled, semantic_threshold: semantic.threshold }),
+    ...(limit && { limit }),
+    ...(pageKey && { page_key: pageKey }),
   };
 }
 

@@ -18,7 +18,7 @@
   } from '$lib/search';
   import { fetchConfig, apiFetch, getUserId } from '$lib/api';
   import { showHelp } from '$lib/stores';
-  import type { SearchResults, SemanticHit } from '$lib/search';
+  import type { SearchResults, SemanticHit, SearchResult } from '$lib/search';
   import { animate } from 'animejs';
   import { Input } from '@hister/components/ui/input';
   import { Button } from '@hister/components/ui/button';
@@ -83,6 +83,11 @@
   let autocomplete = $state('');
   let connected = $state(false);
   let lastResults = $state<SearchResults | null>(null);
+  let accumulatedDocs = $state<SearchResult[]>([]);
+  let pageKey = $state('');
+  let hasMore = $state(false);
+  let loadingMoreForQuery = $state('');
+  let sentinelEl = $state<HTMLElement | undefined>();
   let highlightIdx = $state(0);
   let currentSort = $state('');
   let dateFrom = $state('');
@@ -262,7 +267,7 @@
   }
 
   const mergedResults = $derived(
-    mergeResults(lastResults?.documents, lastResults?.semantic_hits, semanticWeight),
+    mergeResults(accumulatedDocs, lastResults?.semantic_hits, semanticWeight),
   );
 
   const historyLen = $derived((lastResults?.history as any)?.length || 0);
@@ -288,11 +293,40 @@
   }
 
   function sendQuery(q: string) {
-    const message = buildSearchQuery(q, currentSort, dateFrom, dateTo, {
-      enabled: semanticOn && config.semanticEnabled,
-      threshold: similarityThreshold,
-    });
+    loadingMoreForQuery = '';
+    pageKey = '';
+    hasMore = false;
+    const message = buildSearchQuery(
+      q,
+      currentSort,
+      dateFrom,
+      dateTo,
+      {
+        enabled: semanticOn && config.semanticEnabled,
+        threshold: similarityThreshold,
+      },
+      '',
+      20,
+    );
     wsManager?.send(JSON.stringify(message));
+  }
+
+  function loadMoreResults() {
+    if (!pageKey || !hasMore || loadingMoreForQuery) return;
+    loadingMoreForQuery = query;
+    const message = buildSearchQuery(
+      query,
+      currentSort,
+      dateFrom,
+      dateTo,
+      {
+        enabled: semanticOn && config.semanticEnabled,
+        threshold: similarityThreshold,
+      },
+      pageKey,
+      20,
+    );
+    wsManager?.sendImmediate(JSON.stringify(message));
   }
 
   let skipUrlUpdate = false;
@@ -332,10 +366,20 @@
 
   function renderResults(event: MessageEvent) {
     const res = parseSearchResults(event.data);
-    lastResults = res;
-    autocomplete = (query && res.query_suggestion) || '';
-    highlightIdx = 0;
-    resultsShown = true;
+    const isLoadMore = loadingMoreForQuery !== '' && loadingMoreForQuery === query;
+    loadingMoreForQuery = '';
+    if (isLoadMore) {
+      accumulatedDocs = [...accumulatedDocs, ...(res.documents ?? [])];
+      lastResults = { ...lastResults!, ...res, documents: accumulatedDocs };
+    } else {
+      accumulatedDocs = res.documents ?? [];
+      lastResults = res;
+      autocomplete = (query && res.query_suggestion) || '';
+      highlightIdx = 0;
+      resultsShown = true;
+    }
+    hasMore = (res.documents?.length ?? 0) >= 20 && !!res.page_key;
+    pageKey = res.page_key ?? '';
   }
 
   function stripHtml(s: string): string {
@@ -392,11 +436,9 @@
           (getUserId() !== undefined ? ' user_id:' + getUserId() : ''),
       }),
     });
-    if (lastResults?.documents) {
-      lastResults = {
-        ...lastResults,
-        documents: lastResults.documents.filter((d) => d.url !== url),
-      };
+    accumulatedDocs = accumulatedDocs.filter((d) => d.url !== url);
+    if (lastResults) {
+      lastResults = { ...lastResults, documents: accumulatedDocs };
     }
   }
 
@@ -776,6 +818,10 @@
     if (!query) {
       autocomplete = '';
       lastResults = null;
+      accumulatedDocs = [];
+      pageKey = '';
+      hasMore = false;
+      loadingMoreForQuery = '';
     }
   });
   $effect(() => {
@@ -821,6 +867,22 @@
     if (df) dateFrom = df;
     if (dt) dateTo = dt;
     lastPushedEmpty = !q;
+  });
+
+  // IntersectionObserver: load more results when the sentinel comes into view.
+  $effect(() => {
+    const el = sentinelEl;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMore && !loadingMoreForQuery) {
+          loadMoreResults();
+        }
+      },
+      { rootMargin: '200px' },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
   });
 
   onMount(() => {
@@ -1155,7 +1217,8 @@
                             variant="outline"
                             size="sm"
                             class="border-hister-indigo text-hister-indigo hover:bg-hister-indigo/10 h-7 border-[2px] text-xs"
-                            onclick={() => exportJSON(lastResults!)}
+                            onclick={() =>
+                              exportJSON({ ...lastResults!, documents: accumulatedDocs })}
                           >
                             JSON
                           </Button>
@@ -1163,7 +1226,8 @@
                             variant="outline"
                             size="sm"
                             class="border-hister-indigo text-hister-indigo hover:bg-hister-indigo/10 h-7 border-[2px] text-xs"
-                            onclick={() => exportCSV(lastResults!, query)}
+                            onclick={() =>
+                              exportCSV({ ...lastResults!, documents: accumulatedDocs }, query)}
                           >
                             CSV
                           </Button>
@@ -1171,7 +1235,8 @@
                             variant="outline"
                             size="sm"
                             class="border-hister-indigo text-hister-indigo hover:bg-hister-indigo/10 h-7 border-[2px] text-xs"
-                            onclick={() => exportRSS(lastResults!, query)}
+                            onclick={() =>
+                              exportRSS({ ...lastResults!, documents: accumulatedDocs }, query)}
                           >
                             RSS
                           </Button>
@@ -1516,6 +1581,13 @@
             <div class="flex items-center justify-center py-16">
               <span class="font-inter text-text-brand-muted">Searching...</span>
             </div>
+          {/if}
+          {#if hasMore || loadingMoreForQuery}
+            <div bind:this={sentinelEl} class="flex items-center justify-center py-4">
+              <span class="font-inter text-text-brand-muted text-sm">Loading more…</span>
+            </div>
+          {:else if hasResults}
+            <div bind:this={sentinelEl}></div>
           {/if}
         </div>
       </ScrollArea>
