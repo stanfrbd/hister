@@ -70,6 +70,7 @@ type Query struct {
 	SemanticWeight    float64 `json:"semantic_weight"`
 	PageKey           string  `json:"page_key"`
 	IncludeHTML       bool    `json:"include_html"`
+	IncludeText       bool    `json:"include_text"`
 	Facets            bool    `json:"facets,omitempty"`
 	// FacetTermSize overrides the default top-N cap for term facets
 	// (domain, language). Zero uses the default. Useful for completion
@@ -355,7 +356,7 @@ func Reindex(basePath string, rules *config.Rules, skipSensitiveChecks bool, det
 		n := len(res.Hits)
 		b := newMultiBatch(tmpIdx)
 		for _, h := range res.Hits {
-			d := docFromHit(h)
+			d := resFromHit(h, true, true)
 			if d.Type == types.Local {
 				pu, err := url.Parse(d.URL)
 				if err == nil {
@@ -803,11 +804,7 @@ func Search(cfg *config.Config, q *Query) (*Results, error) {
 	}
 	matches := make([]*document.Document, len(res.Hits))
 	for j, v := range res.Hits {
-		if q.IncludeHTML {
-			matches[j] = docFromHit(v)
-		} else {
-			matches[j] = resFromHit(v)
-		}
+		matches[j] = resFromHit(v, q.IncludeText, q.IncludeHTML)
 	}
 	r := &Results{
 		Total:     res.Total,
@@ -923,7 +920,7 @@ func GetByDocID(id string) *document.Document {
 	if err != nil || len(res.Hits) < 1 {
 		return nil
 	}
-	return docFromHit(res.Hits[0])
+	return resFromHit(res.Hits[0], true, true)
 }
 
 func Iterate(fn func(*document.Document)) {
@@ -943,14 +940,14 @@ func Iterate(fn func(*document.Document)) {
 			return
 		}
 		for _, h := range res.Hits {
-			d := docFromHit(h)
+			d := resFromHit(h, true, true)
 			fn(d)
 		}
 		latest = res.Hits[n-1].Fields["url"].(string)
 	}
 }
 
-func resFromHit(h *search.DocumentMatch) *document.Document {
+func resFromHit(h *search.DocumentMatch, includeText, includeHTML bool) *document.Document {
 	d := &document.Document{}
 	if t, ok := h.Fragments["title"]; ok {
 		d.Title = t[0]
@@ -960,8 +957,17 @@ func resFromHit(h *search.DocumentMatch) *document.Document {
 	if s, ok := h.Fields["url"].(string); ok {
 		d.URL = s
 	}
-	if t, ok := h.Fragments["text"]; ok {
+	if includeText {
+		if s, ok := h.Fields["text"].(string); ok {
+			d.Text = s
+		}
+	} else if t, ok := h.Fragments["text"]; ok {
 		d.Text = t[0]
+	}
+	if includeHTML {
+		if s, ok := h.Fields["html"].(string); ok {
+			d.HTML = s
+		}
 	}
 	if s, ok := h.Fields["favicon"].(string); ok {
 		d.Favicon = s
@@ -989,17 +995,6 @@ func resFromHit(h *search.DocumentMatch) *document.Document {
 			}
 			d.Metadata[mk] = v
 		}
-	}
-	return d
-}
-
-func docFromHit(h *search.DocumentMatch) *document.Document {
-	d := resFromHit(h)
-	if s, ok := h.Fields["text"].(string); ok {
-		d.Text = s
-	}
-	if s, ok := h.Fields["html"].(string); ok {
-		d.HTML = s
 	}
 	return d
 }

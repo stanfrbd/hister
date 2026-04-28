@@ -205,6 +205,14 @@ func mcpToolSearch(c *webContext, id json.RawMessage, rawArgs json.RawMessage) {
 		Limit:           args.Limit,
 		SemanticEnabled: args.Semantic && c.Config.SemanticSearch.Enable,
 	}
+	for _, f := range args.Fields {
+		switch f {
+		case "text":
+			q.IncludeText = true
+		case "html":
+			q.IncludeHTML = true
+		}
+	}
 	res, err := doSearch(q, c.Config, c.effectiveRules(), c.UserID)
 	if err != nil {
 		log.Error().Err(err).Str("query", args.Query).Msg("MCP search failed")
