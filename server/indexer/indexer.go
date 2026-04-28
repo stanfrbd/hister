@@ -984,6 +984,9 @@ func resFromHit(h *search.DocumentMatch, includeText, includeHTML bool) *documen
 	if t, ok := h.Fields["user_id"].(float64); ok {
 		d.UserID = uint(t)
 	}
+	if s, ok := h.Fields["language"].(string); ok {
+		d.Language = s
+	}
 	if s, ok := h.Fields["label"].(string); ok {
 		d.Label = s
 	}
