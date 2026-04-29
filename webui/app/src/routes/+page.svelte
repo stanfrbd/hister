@@ -17,6 +17,7 @@
     openURL,
   } from '$lib/search';
   import { fetchConfig, apiFetch, getUserId } from '$lib/api';
+  import { SkipRuleActions, buildUrlSkipPattern, buildDomainSkipPattern } from '@hister/components';
   import { showHelp } from '$lib/stores';
   import type { SearchResults, SemanticHit, SearchResult, SearchQueryOptions } from '$lib/search';
   import { RESULTS_PER_PAGE } from '$lib/search';
@@ -103,7 +104,6 @@
   let actionsQuery = $state('');
   let actionsMessage: string | null = $state(null);
   let actionsError = $state(false);
-  let showActionsForResult: string | null = $state(null);
 
   function formatMetaDate(iso: string | undefined): string {
     if (!iso) return '';
@@ -448,6 +448,59 @@
     });
   }
 
+  async function addSkipRuleForResult(
+    url: string,
+    domain: string,
+    type: 'url' | 'domain',
+    deleteMatches: boolean,
+  ) {
+    actionsMessage = null;
+    actionsError = false;
+    try {
+      const pattern = type === 'url' ? buildUrlSkipPattern(url) : buildDomainSkipPattern(url);
+      const rulesResp = await apiFetch('/rules');
+      const rules = await rulesResp.json();
+      const skipList: string[] = rules.skip || [];
+      if (!skipList.includes(pattern)) {
+        skipList.push(pattern);
+      }
+      const formData = new URLSearchParams();
+      formData.set('skip', skipList.join('\n'));
+      formData.set('priority', (rules.priority || []).join('\n'));
+      await apiFetch('/rules', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: formData.toString(),
+      });
+      if (deleteMatches) {
+        const uid = getUserId();
+        const userFilter = uid !== undefined ? ` user_id:${uid}` : '';
+        const deleteQuery =
+          type === 'url'
+            ? `url:"${url.replaceAll('"', '\\"')}"${userFilter}`
+            : `domain:${domain}${userFilter}`;
+        await apiFetch('/delete', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ query: deleteQuery }),
+        });
+        if (type === 'url') {
+          accumulatedDocs = accumulatedDocs.filter((d) => d.url !== url);
+        } else {
+          accumulatedDocs = accumulatedDocs.filter((d) => d.domain !== domain);
+        }
+        if (lastResults) {
+          lastResults = { ...lastResults, documents: accumulatedDocs };
+        }
+      }
+      actionsMessage = `Skip rule added${deleteMatches ? ' and documents deleted' : ''}.`;
+      actionsError = false;
+    } catch {
+      actionsMessage = 'Failed to add skip rule.';
+      actionsError = true;
+    }
+  }
+
   async function loadPanel(url: string, title: string) {
     panelUrl = url;
     panelTitle = title;
@@ -627,11 +680,6 @@
       }
       if (contextMenuSearch) {
         contextMenuSearch = null;
-        e.preventDefault();
-        return;
-      }
-      if (showActionsForResult) {
-        showActionsForResult = null;
         e.preventDefault();
         return;
       }
@@ -1312,17 +1360,60 @@
                       >
                         {r.title || '*title*'}
                       </a>
-                      <Button
-                        variant="ghost"
-                        size="icon-sm"
-                        class="text-text-brand-muted hover:text-text-brand shrink-0 cursor-pointer"
-                        onclick={() => {
-                          showActionsForResult =
-                            showActionsForResult === 'history:' + r.url ? null : 'history:' + r.url;
-                        }}
-                      >
-                        <MoreVertical class="size-4" />
-                      </Button>
+                      <DropdownMenu.Root>
+                        <DropdownMenu.Trigger>
+                          {#snippet child({ props })}
+                            <Button
+                              {...props}
+                              variant="ghost"
+                              size="icon-sm"
+                              class="text-text-brand-muted hover:text-text-brand shrink-0 cursor-pointer"
+                              onclick={() => {
+                                actionsMessage = null;
+                                actionsError = false;
+                              }}
+                            >
+                              <MoreVertical class="size-4" />
+                            </Button>
+                          {/snippet}
+                        </DropdownMenu.Trigger>
+                        <DropdownMenu.Content
+                          class="border-brutal-border bg-card-surface w-72 rounded-none border-[3px] p-3 shadow-[4px_4px_0_var(--brutal-shadow)]"
+                        >
+                          <div class="space-y-3">
+                            <div class="space-y-2">
+                              <p
+                                class="font-outfit text-text-brand-muted mb-1 text-xs font-bold tracking-widest uppercase"
+                              >
+                                Priority
+                              </p>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                class="border-hister-rose text-hister-rose hover:bg-hister-rose/10 w-full border-[2px] text-xs"
+                                onclick={() =>
+                                  updatePriorityResult(r.url, r.title || '*title*', true)}
+                              >
+                                <PinOff class="size-3.5" />
+                                Unpin
+                              </Button>
+                            </div>
+                            <SkipRuleActions
+                              onAddSkipRule={(type, deleteMatches) =>
+                                addSkipRuleForResult(r.url, r.domain, type, deleteMatches)}
+                            />
+                            {#if actionsMessage}
+                              <p
+                                class="font-inter text-xs {actionsError
+                                  ? 'text-hister-rose'
+                                  : 'text-hister-teal'}"
+                              >
+                                {actionsMessage}
+                              </p>
+                            {/if}
+                          </div>
+                        </DropdownMenu.Content>
+                      </DropdownMenu.Root>
                     </div>
                     <div class="flex items-center gap-2">
                       <span
@@ -1356,33 +1447,6 @@
                     {/if}
                   </div>
                 </article>
-                {#if showActionsForResult === 'history:' + r.url}
-                  {(actionsMessage = '')}
-                  <Card.Root
-                    class="border-brutal-border bg-card-surface ml-8 gap-2 rounded-none border-[3px] py-3 shadow-[3px_3px_0_var(--brutal-shadow)]"
-                  >
-                    <Card.Content class="space-y-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        class="border-hister-rose text-hister-rose hover:bg-hister-rose/10 border-[2px] text-xs"
-                        onclick={() => updatePriorityResult(r.url, r.title || '*title*', true)}
-                      >
-                        <PinOff class="size-3.5" />
-                        Unpin
-                      </Button>
-                      {#if actionsMessage}
-                        <p
-                          class="font-inter text-xs {actionsError
-                            ? 'text-hister-rose'
-                            : 'text-hister-teal'}"
-                        >
-                          {actionsMessage}
-                        </p>
-                      {/if}
-                    </Card.Content>
-                  </Card.Root>
-                {/if}
               {/each}
             {/if}
 
@@ -1441,17 +1505,79 @@
                       >
                         {r.title || '*title*'}
                       </a>
-                      <Button
-                        variant="ghost"
-                        size="icon-sm"
-                        class="text-text-brand-muted hover:text-text-brand shrink-0 cursor-pointer"
-                        onclick={() => {
-                          showActionsForResult =
-                            showActionsForResult === 'doc:' + r.url ? null : 'doc:' + r.url;
-                        }}
-                      >
-                        <MoreVertical class="size-4" />
-                      </Button>
+                      <DropdownMenu.Root>
+                        <DropdownMenu.Trigger>
+                          {#snippet child({ props })}
+                            <Button
+                              {...props}
+                              variant="ghost"
+                              size="icon-sm"
+                              class="text-text-brand-muted hover:text-text-brand shrink-0 cursor-pointer"
+                              onclick={() => {
+                                actionsMessage = null;
+                                actionsError = false;
+                              }}
+                            >
+                              <MoreVertical class="size-4" />
+                            </Button>
+                          {/snippet}
+                        </DropdownMenu.Trigger>
+                        <DropdownMenu.Content
+                          class="border-brutal-border bg-card-surface w-100 rounded-none border-[3px] p-3 shadow-[4px_4px_0_var(--brutal-shadow)]"
+                        >
+                          <div class="space-y-3">
+                            <div class="space-y-2">
+                              <p
+                                class="font-outfit mb-1 text-xs font-bold tracking-widest uppercase"
+                              >
+                                Prioritize this result in query:
+                              </p>
+                              <div class="flex items-center gap-2">
+                                <Input
+                                  bind:value={actionsQuery}
+                                  placeholder="Query.."
+                                  size="sm"
+                                  class="font-inter border-border-brand-muted focus-visible:border-hister-indigo flex-1 border-[2px] text-sm shadow-none focus-visible:ring-0"
+                                />
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  class="border-hister-indigo text-hister-indigo border-[2px] text-xs"
+                                  onclick={() =>
+                                    updatePriorityResult(r.url, r.title || '*title*', false)}
+                                >
+                                  <Pin class="size-3.5" />
+                                  Pin
+                                </Button>
+                              </div>
+                              <hr />
+                            </div>
+                            <SkipRuleActions
+                              onAddSkipRule={(type, deleteMatches) =>
+                                addSkipRuleForResult(r.url, r.domain, type, deleteMatches)}
+                            />
+                            <hr />
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              class="border-hister-rose text-hister-rose hover:bg-hister-rose/10 w-full border-[2px] text-xs"
+                              onclick={() => deleteResult(r.url)}
+                            >
+                              <Trash2 class="size-3.5" />
+                              Delete result
+                            </Button>
+                            {#if actionsMessage}
+                              <p
+                                class="font-inter text-xs {actionsError
+                                  ? 'text-hister-rose'
+                                  : 'text-hister-teal'}"
+                              >
+                                {actionsMessage}
+                              </p>
+                            {/if}
+                          </div>
+                        </DropdownMenu.Content>
+                      </DropdownMenu.Root>
                     </div>
                     <div class="flex items-center gap-2">
                       <span
@@ -1504,51 +1630,6 @@
                     {/if}
                   </div>
                 </article>
-                {#if showActionsForResult === 'doc:' + r.url}
-                  {(actionsMessage = '')}
-                  <Card.Root
-                    class="border-brutal-border bg-card-surface ml-8 gap-2 rounded-none border-[3px] py-3 shadow-[3px_3px_0_var(--brutal-shadow)]"
-                  >
-                    <Card.Content class="space-y-2">
-                      {#if !isSemOnly}
-                        <div class="flex items-center gap-2">
-                          <Input
-                            bind:value={actionsQuery}
-                            placeholder="Query string where this result should appear pinned..."
-                            class="font-inter border-border-brand-muted focus-visible:border-hister-indigo h-7 flex-1 border-[2px] text-sm shadow-none focus-visible:ring-0"
-                          />
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            class="border-hister-indigo text-hister-indigo border-[2px] text-xs"
-                            onclick={() => updatePriorityResult(r.url, r.title || '*title*', false)}
-                          >
-                            <Pin class="size-3.5" />
-                            Pin
-                          </Button>
-                        </div>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          class="border-hister-rose text-hister-rose hover:bg-hister-rose/10 border-[2px] text-xs"
-                          onclick={() => deleteResult(r.url)}
-                        >
-                          <Trash2 class="size-3.5" />
-                          Delete result
-                        </Button>
-                      {/if}
-                      {#if actionsMessage}
-                        <p
-                          class="font-inter text-xs {actionsError
-                            ? 'text-hister-rose'
-                            : 'text-hister-teal'}"
-                        >
-                          {actionsMessage}
-                        </p>
-                      {/if}
-                    </Card.Content>
-                  </Card.Root>
-                {/if}
               {/each}
             {/if}
           {:else if query && lastResults}
