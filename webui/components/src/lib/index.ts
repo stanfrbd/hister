@@ -1,4 +1,6 @@
 export * as utils from './utils.js';
+export { escapeRegex, buildUrlSkipPattern, buildDomainSkipPattern } from './skip-rules.js';
+export { SkipRuleActions } from './components/skip-rule-actions/index.js';
 
 export {
   Button,
